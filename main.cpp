@@ -16,12 +16,13 @@
 //	#include <unistd.h> // getcwd
 #endif
 
+#include <GL/gl3w.h>
+
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
 #include "imgui_impl_sdl_gl3.h"
 #include "imgui_internal.h" // for custom graph renderer
 //#include <stdio.h>
-#include <GL/gl3w.h>
 #include <SDL.h>
 //#include <SDL_opengl.h>
 
