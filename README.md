@@ -3,7 +3,7 @@
 Hopes to become a fast realtime and non-realtime telemetry graphs browser.
 
 
-# credist/dependencies
+# credits/dependencies
 
 All dependencies are also included in the lib folder.
 
