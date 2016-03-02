@@ -8,4 +8,5 @@ Hopes to become a fast realtime and non-realtime telemetry graphs browser.
 All dependencies are also included in the lib folder.
 
 [https://github.com/ocornut/imgui](https://github.com/ocornut/imgui) the fabulous "dear imgui"
-[https://www.libsdl.org/](https://www.libsdl.org/) SDL2
+[https://github.com/skaslev/gl3w](https://github.com/skaslev/gl3w) gl3w: Simple OpenGL core profile loading
+[https://www.libsdl.org/](https://www.libsdl.org/) Simple DirectMedia Layer (SDL2)
