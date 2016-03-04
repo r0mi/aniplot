@@ -5,9 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
-//#include <string.h>
 #include <math.h>
-//#include <time.h>
 
 #ifdef _WIN32
 	#include <direct.h> // getcwd
@@ -22,9 +20,7 @@
 #include <imgui.h>
 #include "imgui_impl_sdl_gl3.h"
 #include "imgui_internal.h" // for custom graph renderer
-//#include <stdio.h>
 #include <SDL.h>
-//#include <SDL_opengl.h>
 
 #include "mip_buf_t.h"
 
@@ -44,9 +40,9 @@ SDL_Window* window = NULL;
 #define INITIAL_SCREEN_HEIGHT 700
 
 #define LOG_IMVEC2(vec) SDL_Log(#vec" %.5f %.5f\n", vec.x, vec.y)
-#define LOG_IMRECT(rc) SDL_Log(#rc" min %.5f %.5f max %.5f %.5f\n", rc.Min.x, rc.Min.y, rc.Max.x, rc.Max.y)
-#define LOG_PORTAL(rc) SDL_Log(#rc" min %.5f %.5f max %.5f %.5f\n", rc.min.x, rc.min.y, rc.max.x, rc.max.y)
-#define LOG_AACS(cs) SDL_Log(#cs" pos %.5f %.5f axis %.5f %.5f\n", cs.pos.x, cs.pos.y, cs.xyaxis.x, cs.xyaxis.y)
+#define LOG_IMRECT(rc)  SDL_Log(#rc" min %.5f %.5f max %.5f %.5f\n", rc.Min.x, rc.Min.y, rc.Max.x, rc.Max.y)
+#define LOG_PORTAL(rc)  SDL_Log(#rc" min %.5f %.5f max %.5f %.5f\n", rc.min.x, rc.min.y, rc.max.x, rc.max.y)
+#define LOG_AACS(cs)    SDL_Log(#cs" pos %.5f %.5f axis %.5f %.5f\n", cs.pos.x, cs.pos.y, cs.xyaxis.x, cs.xyaxis.y)
 
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
@@ -180,6 +176,10 @@ struct GraphChannel {
 	//GraphChannel(float _sample_freq=1000) { set_value_samplespace_mapping(ImRect(0,0, _sample_freq,1)); }
 	GraphChannel() { portal.max = ImVec2d(1000., 1.);} // { set_value_samplespace_mapping(ImRect(0,0, 1000,1)); }
 
+	// convenience functions
+	inline void append_sample(float v) { data_channel.append(v); }
+	inline void append_sample_minmaxavg(float min, float max, float avg) { data_channel.append_minmaxavg(min, max, avg); }
+
 	//void set_portal(PortalRect& _portal) { portal = _portal; } // sample_freq = fabs(_portal.max.x - _portal.min.x);
 	void set_value_limits(float min, float max) { value_min = min; value_max = max; }
 	// How samplevalues should be mapped to a unit-box in valuespace.
@@ -203,7 +203,7 @@ struct GraphVisual {
 		graph_channel = _graph_channel;
 		line_color = ImColor(200, 200, 200);
 		line_color_minmax = ImColor(200, 150, 150, 150);
-		minmax_bgcolor = ImColor(30, 30, 30);
+		minmax_bgcolor = ImColor(20, 20, 20);
 		bg_color = ImColor(0, 0, 0);
 		hor_grid_color = ImVec4(0.15, 0.15, 0.15, 1.0);
 		hor_grid_text_color = ImVec4(1., 1., 1., 0.8);
@@ -216,12 +216,16 @@ struct GraphVisual {
 		grid_min_div_vertical_pix = 100.0;
 		flags = 0;
 		anchored = true;
+		// mirror horizontally. pixel coordinates start from top, but we want values start from bottom.
+		//portal = PortalRect(0,1, 1,0);
+		// also set y zero to center of the window
+		portal = PortalRect(0,1, 1,-1);
 	}
 
 	GraphChannel* graph_channel;  // GraphVisual does NOT take ownership of the graph_channel.
 	ImVec4        line_color;
 	ImVec4        line_color_minmax;
-	ImVec4        minmax_bgcolor; // background that is filled only between value min/max given in GraphChannel.
+	ImVec4        minmax_bgcolor; // background that is filled outside of the value_min/value_max area given in GraphChannel. but is unused if value_min == value_max.
 	ImVec4        bg_color;
 	ImVec4        hor_grid_color;
 	ImVec4        hor_grid_text_color;
@@ -305,6 +309,9 @@ struct GraphWidget {
 		//const ImRect bb(window->DC.CursorPos, window->DC.CursorPos+size);
 		const ImRect bb(window->DC.CursorPos, window->DC.CursorPos+ImGui::GetContentRegionAvail());
 
+		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+		draw_list->PushClipRect(ImVec4(bb.Min.x, bb.Min.y, bb.Max.x, bb.Max.y));
+
 		// TODO: this name here might be not the right thing to use
 		const ImGuiID id = window->GetID(graph_channel.name.c_str());
 
@@ -314,15 +321,6 @@ struct GraphWidget {
 		ImGui::ItemSize(bb, style.FramePadding.y);
 		if (!ImGui::ItemAdd(bb, &id))
 			return;
-
-		if (1) {
-			// TODO: calc pixelperfect coords
-			window->DrawList->AddRectFilled(bb.Min, bb.Max, ImColor(graph_visual.bg_color));
-		//    window->DrawList->AddRect(bb.Min, bb.Max-ImVec2(1,1), window->Color(ImGuiCol_Border));
-			//ImGui::RenderFrame(bb.Min, bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
-			//window->DrawList->AddRectFilled(ImLerp(bb.Min, bb.Max, p0), ImLerp(bb.Min, bb.Max, ImVec2(p1.x, 1.0f))+ImVec2(-1,0), v_hovered == v_idx ? col_hovered : col_base);
-			// TODO: clip region
-		}
 
 		PortalRect screen_visualspace_portal(bb);
 		ImVec2d visualmousecoord = screen_visualspace_portal.proj_vout(g.IO.MousePos); // mouse coord in graph visualspace. 0,0 is top-left corner of the graph, 1,1 bottom-right.
@@ -367,20 +365,27 @@ struct GraphWidget {
 		}
 
 		if (m_dragging) {
-			graph_visual.portal.translate( -g.IO.MouseDelta / bb.GetSize() * graph_visual.portal.size() );
+			// TODO: floating-point problems. different graphs might drift apart.
+			//       correct way to solve it would be to make GraphVisual recursive (be able to contain a list of GraphVisual objects)
+			//       and here move only the top-level GraphVisual portal.
+			for (int i = 0; i < graph_visuals.size(); i++) {
+				graph_visuals[i]->portal.translate( -g.IO.MouseDelta / bb.GetSize() * graph_visuals[i]->portal.size() );
+			}
+			ImVec2 dragdelta(ImGui::GetMouseDragDelta(0));
+			if (dragdelta.x > 0) graph_visual.anchored = false;
 		}
 
+		float last_sample_in_visualspace = graph_visual.sample_to_visualspace(ImVec2(graph_channel.data_channel.size(), 0.)).x;
+		if (last_sample_in_visualspace < 1) graph_visual.anchored = true;
 
-		if (0 && graph_visual.anchored) {
+		if (graph_visual.anchored) {
 			// move visualspace so that its right edge is on the last sample
 			float last_sample_in_valuespace = graph_channel.sample_to_valuespace(ImVec2(graph_channel.data_channel.size(), 0.)).x;
 			float portal_width = graph_visual.portal.w();
-			graph_visual.portal.min.x = last_sample_in_valuespace - portal_width;
-			graph_visual.portal.max.x = last_sample_in_valuespace;
-
-		//     float w = samplespace_x2 - samplespace_x1;
-		//     samplespace_x2 = graph.data_channel.size();
-		//     samplespace_x1 = samplespace_x2 - w;
+			for (int i = 0; i < graph_visuals.size(); i++) {
+				graph_visuals[i]->portal.min.x = last_sample_in_valuespace - portal_width;
+				graph_visuals[i]->portal.max.x = last_sample_in_valuespace;
+			}
 		}
 
 		// TODO: limits!
@@ -392,14 +397,42 @@ struct GraphWidget {
 		PortalRect screen_sample_portal = graph_visual.portal.proj_out( graph_channel.portal ).proj_in(screen_visualspace_portal_);
 		PortalRect screen_value_portal = graph_visual.portal.proj_in(screen_visualspace_portal_);
 
+		// render all graphs, but render grid and text only according to the first graph.
+
+		_render_minmax_background(screen_value_portal, graph_visual, bb);
+
 		_render_grid_horlines(screen_value_portal, graph_visual, bb);
 		_render_grid_verlines(screen_value_portal, graph_visual, bb);
-		_draw_graphlines(screen_sample_portal, graph_visual, bb);
+
+		for (int i = 0; i < graph_visuals.size(); i++) {
+			_draw_graphlines(screen_sample_portal, *graph_visuals[i], bb);
+		}
+
 		_render_grid_horlegend(screen_value_portal, graph_visual, bb);
 		_render_grid_verlegend(screen_value_portal, graph_visual, bb);
+
+		draw_list->PopClipRect();
 	}
 
+	void _render_minmax_background(const PortalRect& screen_value_portal, GraphVisual& graph_visual, const ImRect& canvas_bb) {
+		// TODO: coordinates are NOT pixelperfect. does canvas_bb wrap pixels, or pixel edges?
+		IM_ASSERT(graph_visual.graph_channel);
+		GraphChannel& graph_channel = *graph_visual.graph_channel;
+		PortalRect& bb_valuespace = graph_visual.portal;
+		ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
+		double y1 = screen_value_portal.proj_vout(ImVec2(0., graph_channel.value_min)).y;
+		double y2 = screen_value_portal.proj_vout(ImVec2(0., graph_channel.value_max)).y;
+		if (y1 > y2) { float y = y1; y1 = y2; y2 = y; }
+
+		if (graph_channel.value_min == graph_channel.value_max) {
+			draw_list->AddRectFilled( ImVec2(canvas_bb.Min.x, canvas_bb.Min.y), ImVec2(canvas_bb.Max.x, canvas_bb.Max.y), ImColor(graph_visual.bg_color) );
+		} else {
+			draw_list->AddRectFilled( ImVec2(canvas_bb.Min.x, canvas_bb.Min.y), ImVec2(canvas_bb.Max.x, y1), ImColor(graph_visual.minmax_bgcolor) );
+			draw_list->AddRectFilled( ImVec2(canvas_bb.Min.x, y2), ImVec2(canvas_bb.Max.x, y1), ImColor(graph_visual.bg_color) );
+			draw_list->AddRectFilled( ImVec2(canvas_bb.Min.x, y2), ImVec2(canvas_bb.Max.x, canvas_bb.Max.y), ImColor(graph_visual.minmax_bgcolor) );
+		}
+	}
 
 	// Return value is a number of gridlines to render. One line off the screen on both ends to be able to render half-visible legend.
 	// If the return value (num_gridlines) is 0, other values are undefined.
@@ -421,7 +454,6 @@ struct GraphWidget {
 		*out_val_step = volt_step;
 		return round((volt_end - volt_begin) / volt_step) + 1;
 	}
-
 
 	void _render_grid_horlines(const PortalRect& screen_value_portal, GraphVisual& graph_visual, const ImRect& canvas_bb) {
 		// TODO: coordinates are NOT pixelperfect. does canvas_bb wrap pixels, or pixel edges?
@@ -463,13 +495,17 @@ struct GraphWidget {
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
 		double y = pixel_y_begin;
 		double value = volt_begin;
+		char txt[20];
+
 		for (int i = 0; i < num_gridlines; i++) {
-			char txt[20];
-			ImFormatString(txt, sizeof(txt), "%.2f%s", value, graph_visual.graph_channel->unit.c_str());
+			ImFormatString(txt, sizeof(txt), "%.2f", value);
 			this->m_textrend->drawml(txt, canvas_bb.Min.x, y);
 			y += pixel_y_step;
 			value += volt_step;
 		}
+
+		//this->m_textrend->set_bgcolor(ImColor(graph_visual.hor_grid_text_bgcolor));
+		this->m_textrend->drawml(graph_visual.graph_channel->unit.c_str(), canvas_bb.Min.x + 60, canvas_bb.Min.y + 13);
 	}
 
 	void _render_grid_verlines(const PortalRect& screen_value_portal, GraphVisual& graph_visual, const ImRect& canvas_bb) {
@@ -646,36 +682,80 @@ void fill_graph_with_testdata(GraphChannel& graph)
 	}
 }
 
-typedef std::shared_ptr<GraphWidget> GraphWidgetPtr;
+typedef std::shared_ptr<GraphWidget>  GraphWidgetPtr;
 typedef std::shared_ptr<GraphChannel> GraphChannelPtr;
-typedef std::shared_ptr<GraphVisual> GraphVisualPtr;
+typedef std::shared_ptr<GraphVisual>  GraphVisualPtr;
+
+
+
+struct GraphWorldStream {
+	GraphWorldStream(): stream_id(0) {}
+	uint8_t stream_id;
+	std::vector<GraphChannelPtr> graph_channels;
+	std::vector<GraphVisualPtr>  graph_visuals;
+};
+
+// Holds streams.
+// A stream can consist of multiple channels.
+// Channels can be mapped to different graph_widgets. (well not yet)
 
 class GraphWorld
 {
 public:
-	GraphWorld() {}
+	GraphWorld() { graph_widgets.push_back(GraphWidgetPtr(new GraphWidget)); }
 
+	GraphWorldStream streams[255];
 	std::vector<GraphWidgetPtr> graph_widgets;
-	std::vector<GraphChannelPtr> graph_channels;
-	std::vector<GraphVisualPtr> graph_visuals;
 
-	void test() {
-		GraphWidgetPtr widget = GraphWidgetPtr(new GraphWidget);
-		GraphChannelPtr channel = GraphChannelPtr(new GraphChannel);
-		GraphVisualPtr visual = GraphVisualPtr(new GraphVisual(channel.get()));
-		widget->add_graph(visual.get());
-		graph_widgets.push_back(widget);
-		graph_channels.push_back(channel);
-		graph_visuals.push_back(visual);
+	inline GraphChannel* get_graph_channel(uint8_t stream_id, uint8_t channel_index_in_stream) {
+		// ensure that the wanted channel exists
+		_fill_stream_with_channels(stream_id, channel_index_in_stream + 1);
+		return streams[stream_id].graph_channels[channel_index_in_stream].get();
+	}
 
-		visual->set_visual_valuespace_mapping(ImRect(0., 1., 1., -1));
+	//void clear_stream(uint8_t stream_id) {
+	//	// TODO: how??
+	//}
+
+	// stream_id : 0..255
+	// channel_id : 0..255
+	// datatype not implemented
+	void update_channel_info(uint8_t stream_id, uint8_t channel_index_in_stream,
+			uint8_t* channel_name, uint8_t* channel_unit, uint8_t datatype, float channel_frequency,
+			uint32_t rgba,
+			float value_min, float value_max,
+			float portal_x1, float portal_y1, float portal_x2, float portal_y2) {
+
+		_fill_stream_with_channels(stream_id, channel_index_in_stream + 1);
+
+		GraphWorldStream* stream = &streams[stream_id];
+
+		// TODO: replace the whole channel if datatypes are different
+
+		GraphChannel* channel = stream->graph_channels[channel_index_in_stream].get();
+		GraphVisual*  visual  = stream->graph_visuals[channel_index_in_stream].get();
+
+		//visual->set_visual_valuespace_mapping(ImRect(0., 1., 1., -1));
+		visual->line_color = ImColor(rgba);
 		// How samplevalues should be mapped to a unit-box in valuespace.
 		// ImRect(1, 10,  2, 255) maps samplenum 1 to 0s, sampleval 10 to 0V, samplenum 2 to 1s, sampleval 255 to 1V.
-		channel->set_value_samplespace_mapping(ImRect(0., 0., 100., 1.));
-		channel->unit = "V";
+		channel->set_value_samplespace_mapping(ImRect(portal_x1, portal_y1, portal_x2, portal_y2));
+		channel->set_value_limits(value_min, value_max);
+		channel->name = (char*)channel_name;
+		channel->unit = (char*)channel_unit;
+	}
+
+	// make sure stream contains at least num_channels
+	void _fill_stream_with_channels(uint8_t stream_id, uint8_t num_channels) {
+		while (streams[stream_id].graph_channels.size() < num_channels) {
+			GraphChannelPtr channel = GraphChannelPtr(new GraphChannel);
+			GraphVisualPtr  visual  = GraphVisualPtr(new GraphVisual(channel.get()));
+			streams[stream_id].graph_channels.push_back(channel);
+			streams[stream_id].graph_visuals.push_back(visual);
+			graph_widgets[0]->add_graph(visual.get());
+		}
 	}
 };
-
 
 
 
@@ -683,6 +763,49 @@ public:
 #include <winsock2.h>
 
 using namespace std;
+
+#define P_CHANNEL_SAMPLES 10
+#define P_CHANNEL_INFO 11
+
+#pragma pack(push,1)
+struct p_channel_info {
+	uint8_t  packet_type;
+	uint8_t  packet_version;
+	uint8_t  stream_id;
+
+	uint8_t  channel_index; // channel index in stream. starts from 0.
+	uint8_t  channel_name[51]; // zero-terminated
+	uint8_t  unit[51];  // zero-terminated
+	uint8_t  datatype; // "b", "f", "B", "d", "i", "u", "I", "U", "h", "H"; // only f is supported
+	uint8_t  reserved;
+	float    frequency;
+	uint32_t rgba;
+	// used to draw visual limits. if you know your signal is for example 0..5V, use 0 as min and 5 as max here.
+	float    value_min;
+	float    value_max;
+	// used to translate and scale the samples to value-space
+	// x1 and y1 is mapped to 0 in value space, x2 and y2 is mapped to 1 in value space.
+	// for example using (0, 5,  1000, 0) maps sample num 1000 to 1s and sampleval 1 to 5V.
+	float    portal_x1;
+	float    portal_y1;
+	float    portal_x2;
+	float    portal_y2;
+};
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct p_channel_samples {
+	uint8_t  packet_type;
+	uint8_t  packet_version;
+	uint8_t  stream_id;
+	uint8_t  channel_index; // channel index in stream. starts from 0.
+	uint8_t  channel_packet_sn;
+	uint8_t  datatype; // "b", "f", "B", "d", "i", "u", "I", "U", "h", "H"; // only f is supported
+	uint16_t samples_bytes;
+	float    samples[];
+};
+#pragma pack(pop)
+
 
 class WindowsUdpListener {
 public:
@@ -739,27 +862,44 @@ public:
 		int n = 1;
 		while (n > 0) {
 			n = recvfrom(_socket, (char*)rxbuf, sizeof(rxbuf), 0, (SOCKADDR*)&remote_addr, &server_length);
-			// packet: packet type, stream id, datatype, stream
-			// datatype "b", "f", "B", "d", "i", "u", "I", "U", "h", "H"
-			// return struct.pack("<BBB" + "f"*len(samples_list), 10, 1, ord('f'), *samples_list)
-			//if (n <= 0) break;
+			if (n <= 0) break;
 
-			if (n > 3) {
-				uint8_t packet_type = rxbuf[0];
-				uint8_t stream_id = rxbuf[1];
-				uint8_t datatype = rxbuf[2];
-				float* samples = (float*)(rxbuf + 3);
-				int num_samples = (n - 3) / 4;
-				for (int i = 0; i < num_samples; i++) {
+			uint8_t packet_type = rxbuf[0];
+
+			if (packet_type == P_CHANNEL_SAMPLES && n > sizeof(p_channel_samples)) {
+
+				p_channel_samples* p = (p_channel_samples*)rxbuf;
+				if (p->packet_version != 1) continue;
+
+				GraphChannel* graph_channel = graph_world.get_graph_channel(p->stream_id, p->channel_index);
+				float* samples = &p->samples[0];
+				for (int i = 0; i < p->samples_bytes / 4; i++) {
 					float v = samples[i];
-					graph_world.graph_channels[0]->data_channel.append_minmaxavg(v, v, v);
+					graph_channel->append_sample_minmaxavg(v, v, v);
 				}
+
+			} else if (packet_type == P_CHANNEL_INFO) {
+
+				p_channel_info* p = (p_channel_info*)rxbuf;
+				if (p->packet_version != 1) continue;
+
+				graph_world.update_channel_info(p->stream_id, p->channel_index,
+					p->channel_name, p->unit, p->datatype, p->frequency, p->rgba,
+					p->value_min, p->value_max,
+					p->portal_x1, p->portal_y1, p->portal_x2, p->portal_y2);
 			}
 		}
 
 		//sendto(_socket, txbuf, strlen(txbuf), 0, (SOCKADDR*)&remote_Addr, server_length);
 	}
 };
+
+
+ImRect get_window_coords() {
+	return ImRect(ImGui::GetWindowPos(), ImGui::GetWindowPos()+ImGui::GetWindowSize());
+	//const ImRect bb(window->DC.CursorPos, window->DC.CursorPos+size);
+	//const ImRect bb(window->DC.CursorPos, window->DC.CursorPos+ImGui::GetContentRegionAvail());
+}
 
 
 int main(int, char**)
@@ -814,32 +954,31 @@ int main(int, char**)
 
 	SDL_Log("Supported GLSL version is %s.\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-
-	//glewExperimental = GL_TRUE;
-	//GLenum glewError = glewInit();
-	//if (glewError != GLEW_OK) {
-	//    SDL_Log("Error initializing GLEW! %s\n", glewGetErrorString(glewError));
-	//    return -1;
-	//}
-
-	// Use Vsync
-	if (SDL_GL_SetSwapInterval(1) < 0) {
-		SDL_Log("Warning: Unable to set VSync! SDL Error: %s\n", SDL_GetError());
+	// Use Vsync, set for late swap tearing.
+	if (SDL_GL_SetSwapInterval(-1) < 0) {
+		SDL_Log("Warning: Unable to set VSync for late swap tearing! SDL Error: %s\n", SDL_GetError());
 	}
-
 
 	// Setup ImGui binding
 	ImGui_ImplSdlGL3_Init(window);
 
+
+	// --------------------------------------------------------------------
+
 	ImVec4 clear_color = ImColor(114, 144, 154);
+	ImguiTextwrap textrend;
 
 	GraphWorld graph_world;
-	graph_world.test();
+	// creates one channel. without it, nothing would be rendered until someone updated some channels.
+	GraphChannel* graph_channel = graph_world.get_graph_channel(0, 0);
 
 	WindowsUdpListener windows_udp_listener;
 
 #if 0
+
 	if (0) {
+		GraphChannel* graph_channel = graph_world.get_graph_channel(0, 0);
+
 		// TODO: 500 million samples crash on windows. 1.8GB memory gets allocated, then crash.
 		for (int i = 0; i < 500000; i++) {
 			float v = 0.9*sinf(i * 1000. / 60. / 3. * M_PI / 180.) +
@@ -849,7 +988,7 @@ int main(int, char**)
 					sinf(i * 1000. / 60. / 12345. * M_PI / 180.) +
 					2.*sinf(i * 1000. / 60. / 567890. * M_PI / 180.) +
 					sinf(i * 1000. / 60. / 58890000. * M_PI / 180.);
-			graph_channel.data_channel.append_minmaxavg(v, v, v);
+			graph_channel->append_sample(v);
 		}
 	}
 
@@ -888,7 +1027,6 @@ int main(int, char**)
 
 		ImGuiIO &io = ImGui::GetIO();
 
-
 		// make the window always fullsize.
 		// disable window background rendering.
 		// remove borders, titlebar, menus, ..
@@ -906,60 +1044,30 @@ int main(int, char**)
 
 			uint32_t milliseconds = SDL_GetTicks();
 
-//            float v = sin(milliseconds / 3. * M_PI / 180.);
-//			graph_world.graph_channels[0]->data_channel.append_minmaxavg(v, v, v);
+			//float v = sin(milliseconds / 3. * M_PI / 180.);
 			//graph_channel.data_channel.append_minmaxavg(v, v, v);
-
-
-			// kas k6ik peaks olema eraldi normaliseeritud?
-			// vastu v6tavad udp, tcp, serial, whatever.
-			// tahaks et parserid saaks otseligip22su graafikutele.
-			// saaks lisada datat otse graafikusse
-			// kuidas selliseid asju siis lahendatakse? data ja commandid tulevad sisse ja nende peale peab midagi tegema.
-			// kas kakkuda otse objekte, v6i l2bi globaalsete funktsioonide tegutseda?
-			// mis teha kui objektid on templeitidega tehtud? siis ei ole m6istlik eraldi globaalseid funktsioone tekitada iga tyybi jaoks.
-			//
-			// globaalsed
-			// read_udp
-			// read_serial
-			// kuskil peab olema striim-hw mapping.
-			//
-
-//            class UdpStream:
-//                init(datatype, )
-//                read()
-
-			// eiei. udp ja serial on nagu command source, mille kaudu saab striime tekitada, metadatat muuta jne.
-			// seega peab neil olema ligip22s kogu maailmale.
-
-//            for stream in streams:
-//                if serial stream:
-//                    void*
-//                    read serial with stream.datatype
-//                    send packet or streamdata to a global func with datatype param and void* of graph_channel.
-
-//                if udp stream: read udp and append to stream.graph_channel
-
-
-			// read udp data
-
-			//float get_data_from_network
 
 			windows_udp_listener.tick(graph_world);
 
 			//for (auto graph : graph_world) {}
 			graph_world.graph_widgets[0]->DoGraph(ImVec2(1000, 600));
-//            graph_widget.DoGraph(ImVec2(1000, 600));
+
+			if (!textrend.font) textrend.init(ImGui::GetWindowFont());
+
+			char txt[50];
+			ImFormatString(txt, sizeof(txt), "fps: %.1f (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+			ImRect windim = get_window_coords();
+			textrend.set_bgcolor(ImColor(80,80,80,100));
+			textrend.set_fgcolor(ImColor(255,255,255,100));
+			textrend.drawtr(txt, windim.Max.x - 14, windim.Min.y + 14);
+
 			ImGui::End();
 		}
-//            if (ImGui::Button("Another Window")) show_another_window ^= 1;
-
-//        ImGui::Begin("deb", NULL);
-//        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-//        ImGui::End();
 
 
 		if (0) {
+
+			// testing ground
 
 			ImGui::Begin("deb", NULL);
 
@@ -978,13 +1086,6 @@ int main(int, char**)
 			// TODO: ascent + descent == size?
 
 
-
-
-
-
-
-
-
 			// 1.0 ,1.0  2.0 ,2.0  - this draws 1x1 square one pixel away from the corner
 			// 1.5 ,1.5  2.0 ,2.0  - this draws 1x1 square one pixel away from the corner
 			// 1.51,1.51 2.0 ,2.0  - this draws nothing
@@ -1000,47 +1101,31 @@ int main(int, char**)
 			//        (0.5 - 1.5] - rendering starts from second pixel. smaller-equal than 0.5 is first pixel.
 			//ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(0.51, 0.51), ImVec2(2.50, 2.50), ImColor(128,128,128,255));
 
-			ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(up_left_x, up_left_y), ImVec2(down_right_x, down_right_y),
-													  ImColor(128, 128, 128, 255));
+			ImGui::GetWindowDrawList()->AddRectFilled(
+				ImVec2(up_left_x, up_left_y),
+				ImVec2(down_right_x, down_right_y),
+				ImColor(128, 128, 128, 255));
 
 			// text : pixel coordinates start from pixel corner, not from pixel center.
 			// [0., 1.) - render starts inside first pixel. 1. is start of the second pixel.
 			//ImGui::GetWindowDrawList()->AddText(ImGui::GetWindowFont(), ImGui::GetWindowFont()->FontSize, ImVec2(1., 1.), ImColor(255,255,255,255), txt, NULL, 0, NULL);
 
-			ImGui::GetWindowDrawList()->AddText(ImGui::GetWindowFont(), ImGui::GetWindowFont()->FontSize, ImVec2(x, y),
-												ImColor(255, 255, 255, 255), txt, NULL, 0, NULL);
+			ImGui::GetWindowDrawList()->AddText(
+				ImGui::GetWindowFont(),
+				ImGui::GetWindowFont()->FontSize,
+				ImVec2(x, y),
+				ImColor(255, 255, 255, 255),
+				txt, NULL, 0, NULL);
 
 			// textile saab floor teha ok.
 			// aga rectile? round(x-0.5)
 			// tekstil on pixel 1, x coord [1..2)
-			// rectil sel juhul
 
 			ImGui::End();
 		}
 
-
-/*
-		static int front = 50;
-		ImGui::Text("100");
-		ImGui::SameLine(0,10);
-		ImGui::SliderInt("", &front, 0, 100, "%.0f");
-		ImGui::SameLine(0,10);
-		ImGui::Text("100");
-
-		ImGui::Dummy(ImVec2(0, 180));
-
-
-		static int rear = 50;
-		ImGui::Text("100");
-		ImGui::SameLine(0,10);
-		ImGui::SliderInt("", &rear, 0, 100, "%.0f");
-		ImGui::SameLine(0,10);
-		ImGui::Text("100");
-*/
-
 		//static bool show_test_window;
 		//ImGui::ShowTestWindow(&show_test_window);
-
 
 		// Rendering
 		glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
@@ -1058,4 +1143,3 @@ int main(int, char**)
 
 	return 0;
 }
-

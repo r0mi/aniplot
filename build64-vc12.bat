@@ -50,6 +50,8 @@ cl /FC /Zi /MD /Fo%BUILDDIR%\ /Fd%BUILDDIR%\ /Fm%BUILDDIR%\ /Fe%BUILDDIR%\aniplo
     /link /SUBSYSTEM:CONSOLE ^
           /LIBPATH:"%SDL2DIR%\lib\x64"
 
+rem    /O2 /GL ^
+
 rmdir dist
 mkdir dist
 copy %BUILDDIR%\aniplot.exe .\dist\
