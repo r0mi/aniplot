@@ -334,11 +334,12 @@ struct GraphWidget {
 			ImGuiIO& io = ImGui::GetIO();
 			ImVec2 zoom(0.,0.);
 
+			// if mouse wheel moves, zoom height if ctrl or right mousebutton is down. else zoom width.
 			if (io.MouseWheel < 0) {
-				zoom = io.KeyCtrl ? ImVec2(1., 1.3) : ImVec2(1.3, 1.);
+				zoom = (io.KeyCtrl || g.IO.MouseDown[1]) ? ImVec2(1., 1.3) : ImVec2(1.3, 1.);
 			}
 			if (io.MouseWheel > 0) {
-				zoom = io.KeyCtrl ? ImVec2(1., 1./1.3) : ImVec2(1./1.3, 1.);
+				zoom = (io.KeyCtrl || g.IO.MouseDown[1]) ? ImVec2(1., 1./1.3) : ImVec2(1./1.3, 1.);
 			}
 			if (zoom.x || zoom.y) {
 				for (int i = 0; i < graph_visuals.size(); i++) {
