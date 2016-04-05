@@ -25,7 +25,7 @@
 #include "mip_buf_t.h"
 
 #include "imgui_textwrap.h"
-#include "memfile.h"
+//#include "memfile.h"
 
 #undef min
 #undef max
@@ -759,10 +759,6 @@ public:
 };
 
 
-
-#include <iostream>
-#include <winsock2.h>
-
 using namespace std;
 
 #define P_CHANNEL_SAMPLES 10
@@ -808,61 +804,110 @@ struct p_channel_samples {
 #pragma pack(pop)
 
 
-class WindowsUdpListener {
+
+#ifdef _WIN32
+	//#include <iostream>
+	#include <winsock2.h>
+#else
+	#include <sys/socket.h>
+	#include <netinet/in.h> // sockaddr_in
+	#include <arpa/inet.h>  // inet_addr
+#endif
+
+
+class UdpListener {
 public:
-	WSADATA _wsa_data;
-	SOCKET _socket;
-	SOCKET _backup;
-	SOCKET _accept_socket;
-	sockaddr_in _address;
+	#ifdef _WIN32
+		WSADATA _wsa_data;
+		SOCKET _socket;
+		sockaddr_in _address;
+	#else
+		int _socket;
+		sockaddr_in _address;
+	#endif // _WIN32
 
 	bool _initialized;
 
-	WindowsUdpListener() {
+	UdpListener() {
 		uint16_t PORT = 59100;
 
 		_initialized = false;
-		if (WSAStartup(MAKEWORD(2, 2), &_wsa_data) != NO_ERROR) {
-			SDL_Log("WindowsUdpListener: error in WSAStartup\n");
-			WSACleanup();
-			return;
-		}
 
-		_socket = socket(AF_INET, SOCK_DGRAM, 0);
-		if (_socket == INVALID_SOCKET) {
-			SDL_Log("WindowsUdpListener: error creating socket\n");
-			WSACleanup();
-			return;
-		}
+		#ifdef _WIN32
 
-		_address.sin_family = AF_INET;
-		_address.sin_addr.s_addr = inet_addr("0.0.0.0");
-		_address.sin_port = htons(PORT);
+			if (WSAStartup(MAKEWORD(2, 2), &_wsa_data) != NO_ERROR) {
+				SDL_Log("UdpListener: error in WSAStartup\n");
+				WSACleanup();
+				return;
+			}
 
-		// If iMode!=0, non-blocking mode is enabled.
-		u_long iMode = 1;
-		ioctlsocket(_socket, FIONBIO, &iMode);
+			_socket = socket(AF_INET, SOCK_DGRAM, 0);
+			if (_socket == INVALID_SOCKET) {
+				SDL_Log("UdpListener: error creating socket\n");
+				WSACleanup();
+				return;
+			}
 
-		if (bind(_socket, (SOCKADDR*)&_address, sizeof(_address)) == SOCKET_ERROR) {
-			SDL_Log("WindowsUdpListener: failed to bind socket\n");
-			WSACleanup();
-			return;
-		}
+			// TODO: clean to zero
+			_address.sin_family = AF_INET;
+			_address.sin_addr.s_addr = inet_addr("0.0.0.0");
+			_address.sin_port = htons(PORT);
+
+			// If iMode!=0, non-blocking mode is enabled.
+			u_long iMode = 1;
+			ioctlsocket(_socket, FIONBIO, &iMode);
+
+			if (bind(_socket, (SOCKADDR*)&_address, sizeof(_address)) == SOCKET_ERROR) {
+				SDL_Log("UdpListener: failed to bind socket\n");
+				WSACleanup();
+				return;
+			}
+
+		#else
+
+			_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+			if (_socket < 0) {
+				SDL_Log("UdpListener: error creating socket\n");
+				return;
+			}
+
+			// zero out the structure
+			memset((char*)&_address, 0, sizeof(_address));
+
+			_address.sin_family = AF_INET;
+			_address.sin_addr.s_addr = inet_addr("0.0.0.0");
+			_address.sin_port = htons(PORT);
+
+			if (bind(_socket, (struct sockaddr*)&_address, sizeof(_address)) < 0) {
+				SDL_Log("UdpListener: failed to bind socket\n");
+				return;
+			}
+
+		#endif // _WIN32
 
 		_initialized = true;
+	}
+
+	int _recvfrom(uint8_t* rxbuf, size_t maxlen) {
+		sockaddr_in remote_addr;
+		// TODO: need to differentiate between win and others? and the server_length stuff - what's that?
+		#ifdef _WIN32
+			int server_length = sizeof(struct sockaddr_in);
+			return recvfrom(_socket, (char*)rxbuf, maxlen, 0, (SOCKADDR*)&remote_addr, &server_length);
+		#else
+			socklen_t server_length = sizeof(struct sockaddr_in);
+			return recvfrom(_socket, (char*)rxbuf, maxlen, MSG_DONTWAIT, (struct sockaddr*)&remote_addr, &server_length);
+		#endif
 	}
 
 	void tick(GraphWorld& graph_world) {
 		if (!_initialized) return;
 
 		uint8_t rxbuf[65535];
-		sockaddr_in remote_addr;
-
-		int server_length = sizeof(struct sockaddr_in); // whatever the fuck this is
 
 		int n = 1;
 		while (n > 0) {
-			n = recvfrom(_socket, (char*)rxbuf, sizeof(rxbuf), 0, (SOCKADDR*)&remote_addr, &server_length);
+			n = _recvfrom(rxbuf, sizeof(rxbuf));
 			if (n <= 0) break;
 
 			uint8_t packet_type = rxbuf[0];
@@ -973,7 +1018,7 @@ int main(int, char**)
 	// creates one channel. without it, nothing would be rendered until someone updated some channels.
 	GraphChannel* graph_channel = graph_world.get_graph_channel(0, 0);
 
-	WindowsUdpListener windows_udp_listener;
+	UdpListener windows_udp_listener;
 
 #if 0
 
