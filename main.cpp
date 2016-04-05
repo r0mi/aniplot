@@ -561,7 +561,7 @@ struct GraphWidget {
 		int days = int(floor(s / (60 * 60 * 24)));
 		int hours = int(floor(s / (60 * 60))) % 24;
 		int minutes = int(floor(s / 60)) % 60;
-		int seconds2 = int(s) % 60;
+		float seconds2 = int(s) % 60;
 
 		if (s < 60) {
 			ImFormatString(outstr, outstr_size, "%.2fs", s);
@@ -1122,7 +1122,7 @@ int main(int, char**)
 			float x = floor(1.);
 			float y = floor(1.);
 
-			char *txt = "AB";
+			const char* txt = "AB";
 			ImVec2 str_size = f->CalcTextSizeA(f->FontSize, FLT_MAX, 0, txt, NULL, NULL);
 
 			float up_left_x = x;
