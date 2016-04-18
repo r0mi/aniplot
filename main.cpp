@@ -266,7 +266,7 @@ struct GraphVisual {
 
 
 // Can contain many graphs (Graph objects).
-// Handles user interacition (mouse dragging, keyboard movement)
+// Handles user interaction (mouse dragging, keyboard movement)
 // Animates movements smoothly
 struct GraphWidget {
 	GraphWidget() {
@@ -394,7 +394,8 @@ struct GraphWidget {
 		// calculate a coordinate system screen_sample_portal that converts from sample-space directly to screen-space (pixel-coordinates)
 
 		// TODO: i don't quite know yet why this works. is this inversion of the portal?
-		PortalRect screen_visualspace_portal_(-1.0f/bb.GetSize()*bb.Min, -1.0f/bb.GetSize()*bb.Min +(1.0f/bb.GetSize()));
+		// TODO: make this double. bb hast to be ImVec2d in that case.
+		PortalRect screen_visualspace_portal_(-1.0f/bb.GetSize()*bb.Min, -1.0f/bb.GetSize()*bb.Min + 1.0f/bb.GetSize());
 		PortalRect screen_sample_portal = graph_visual.portal.proj_out( graph_channel.portal ).proj_in(screen_visualspace_portal_);
 		PortalRect screen_value_portal = graph_visual.portal.proj_in(screen_visualspace_portal_);
 
@@ -411,6 +412,8 @@ struct GraphWidget {
 
 		_render_grid_horlegend(screen_value_portal, graph_visual, bb);
 		_render_grid_verlegend(screen_value_portal, graph_visual, bb);
+
+		_render_legend(bb);
 
 		draw_list->PopClipRect();
 	}
@@ -493,7 +496,6 @@ struct GraphWidget {
 		this->m_textrend->set_fgcolor(ImColor(graph_visual.hor_grid_text_color));
 		this->m_textrend->set_bgcolor(ImColor(graph_visual.hor_grid_text_bgcolor));
 
-		ImDrawList* draw_list = ImGui::GetWindowDrawList();
 		double y = pixel_y_begin;
 		double value = volt_begin;
 		char txt[20];
@@ -544,7 +546,6 @@ struct GraphWidget {
 		this->m_textrend->set_fgcolor(ImColor(graph_visual.hor_grid_text_color));
 		this->m_textrend->set_bgcolor(ImColor(graph_visual.hor_grid_text_bgcolor));
 
-		ImDrawList* draw_list = ImGui::GetWindowDrawList();
 		double x = pixel_x_begin;
 		double value = time_begin;
 		for (int i = 0; i < num_gridlines; i++) {
@@ -553,6 +554,36 @@ struct GraphWidget {
 			this->m_textrend->drawbm(txt, x, canvas_bb.Max.y);
 			x += pixel_x_step;
 			value += time_step;
+		}
+	}
+
+	void _render_legend(const ImRect& canvas_bb) {
+		int text_h = this->m_textrend->height + 4; // TODO: text height seems to be wrong
+
+		int h = text_h * graph_visuals.size() + 6;
+		int w = text_h * 10; // roughly how many characters wide. works only with square fonts
+		int x = canvas_bb.Min.x + 80;
+		int y = canvas_bb.Max.y - h - 40;
+
+		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+		ImVec2 p_min = ImVec2(x, y);
+		ImVec2 p_max = ImVec2(x+w, y+h);
+
+		ImColor fill_col = ImColor(0, 0, 0, 128);
+		ImColor border_col = ImColor(170, 170, 170, 128);
+		int rounding = 0;
+
+		draw_list->AddRectFilled(p_min, p_max, fill_col, rounding);
+		draw_list->AddRect(p_min, p_max, border_col, rounding);
+		this->m_textrend->set_bgcolor(ImColor(0,0,0,0));
+		this->m_textrend->set_fgcolor(ImColor(160,160,160,255));
+
+		for (int i = 0; i < graph_visuals.size(); i++) {
+
+			if (!graph_visuals[i]->graph_channel) continue;
+			this->m_textrend->drawtl(graph_visuals[i]->graph_channel->name.c_str(), x + 18, y + text_h * i + 3);
+			float line_y = y + text_h * i + text_h/2 + 3;
+			draw_list->AddLine(ImVec2(x + 4, line_y), ImVec2(x + 13, line_y), ImColor(graph_visuals[i]->line_color)); // ImColor(graph_visual.ver_grid_color));
 		}
 	}
 
