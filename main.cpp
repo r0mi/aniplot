@@ -11,7 +11,7 @@
 	#include <direct.h> // getcwd
 	#define getcwd _getcwd
 #else
-//	#include <unistd.h> // getcwd
+	#include <unistd.h> // getcwd
 #endif
 
 #include <GL/gl3w.h>
