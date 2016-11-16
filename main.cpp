@@ -216,6 +216,7 @@ struct GraphVisual {
 		grid_min_div_vertical_pix = 100.0;
 		flags = 0;
 		anchored = true;
+		visible = true;
 		// mirror horizontally. pixel coordinates start from top, but we want values start from bottom.
 		//portal = PortalRect(0,1, 1,0);
 		// also set y zero to center of the window
@@ -238,6 +239,7 @@ struct GraphVisual {
 	float         grid_min_div_vertical_pix;
 	float         line_width;     // in pixels
 	bool          anchored;       // newest sample is anchored to the right window edge.
+	bool          visible;        // graph line rendered or not.
 	uint32_t      flags;          // GraphVisualFlags_
 	PortalRect    portal;         // Everything coming out of this portal between 0..1 is visible. Resides in value-space.
 
@@ -407,7 +409,8 @@ struct GraphWidget {
 		_render_grid_verlines(screen_value_portal, graph_visual, bb);
 
 		for (int i = 0; i < graph_visuals.size(); i++) {
-			_draw_graphlines(screen_sample_portal, *graph_visuals[i], bb);
+			if (graph_visuals[i]->visible)
+				_draw_graphlines(screen_sample_portal, *graph_visuals[i], bb);
 		}
 
 		_render_grid_horlegend(screen_value_portal, graph_visual, bb);
@@ -558,9 +561,10 @@ struct GraphWidget {
 	}
 
 	void _render_legend(const ImRect& canvas_bb) {
-		int text_h = this->m_textrend->height + 4; // TODO: text height seems to be wrong
+		int text_h = this->m_textrend->height + 10; // TODO: text height seems to be wrong
 
-		int h = text_h * graph_visuals.size() + 6;
+		// TODO: how the f does this work? + 4 is for top padding, but we also have the bottom to take care of, yet everything is perfect with 4 instead of 8 here.
+		int h = text_h * graph_visuals.size() + 4; // checkbox height with builtin padding
 		int w = text_h * 10; // roughly how many characters wide. works only with square fonts
 		int x = canvas_bb.Min.x + 80;
 		int y = canvas_bb.Max.y - h - 40;
@@ -575,16 +579,29 @@ struct GraphWidget {
 
 		draw_list->AddRectFilled(p_min, p_max, fill_col, rounding);
 		draw_list->AddRect(p_min, p_max, border_col, rounding);
-		this->m_textrend->set_bgcolor(ImColor(0,0,0,0));
-		this->m_textrend->set_fgcolor(ImColor(160,160,160,255));
+
+		x += 4; y += 4; // pad
+
+		ImGui::SetCursorPos(ImVec2(x,y));
+		ImGui::BeginGroup();
 
 		for (int i = 0; i < graph_visuals.size(); i++) {
 
 			if (!graph_visuals[i]->graph_channel) continue;
-			this->m_textrend->drawtl(graph_visuals[i]->graph_channel->name.c_str(), x + 18, y + text_h * i + 3);
-			float line_y = y + text_h * i + text_h/2 + 3;
-			draw_list->AddLine(ImVec2(x + 4, line_y), ImVec2(x + 13, line_y), ImColor(graph_visuals[i]->line_color)); // ImColor(graph_visual.ver_grid_color));
+			ImGui::PushID(i);
+			ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(graph_visuals[i]->line_color));
+
+			ImGui::Checkbox(graph_visuals[i]->graph_channel->name.c_str(), &graph_visuals[i]->visible);
+			ImGui::PopStyleColor(1);
+			ImGui::PopID();
+
+			// draw little horizontal line (with current graph color) inside the checkbox if checkbox is not set.
+			if (!graph_visuals[i]->visible) {
+				float line_y = y + text_h * i + text_h/2 - 1;
+				draw_list->AddLine(ImVec2(x + 3, line_y), ImVec2(x + 16, line_y), ImColor(graph_visuals[i]->line_color)); // ImColor(graph_visual.ver_grid_color));
+			}
 		}
+		ImGui::EndGroup();
 	}
 
 	void _grid_timestr(double seconds, double step, char* outstr, int outstr_size) {
@@ -1108,6 +1125,9 @@ int main(int, char**)
 		// disable window background rendering.
 		// remove borders, titlebar, menus, ..
 		// TODO: change window margins?
+
+
+		//ImGui::ShowTestWindow();
 
 		if (1) {
 			float prev_bgalpha = GImGui->Style.WindowFillAlphaDefault; // PushStyleVar() doesn't seem to support this yet
