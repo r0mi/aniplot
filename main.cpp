@@ -1065,6 +1065,7 @@ int main(int, char**)
 	GraphWorld graph_world;
 	// creates one channel. without it, nothing would be rendered until someone updated some channels.
 	GraphChannel* graph_channel = graph_world.get_graph_channel(0, 0);
+	graph_channel->name = "default";
 
 	UdpListener windows_udp_listener;
 
