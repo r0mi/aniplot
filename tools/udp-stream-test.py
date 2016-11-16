@@ -65,7 +65,7 @@ P_CHANNEL_INFO    = 11
 def build_channel_info(stream_id, channel_index, channel_name, unit, rgba8, value_limits, portal):
 	if len(channel_name) >= 50: channel_name = channel_name[:50]
 	if len(unit) >= 50: unit = unit[:50]
-	return struct.pack("<BBBB51s51sBBfBBBBffffff", P_CHANNEL_INFO, 1, stream_id, channel_index, channel_name, unit, ord('f'), 0, 1,
+	return struct.pack("<BBBB51s51sBBfBBBBffffff", P_CHANNEL_INFO, 1, stream_id, channel_index, bytes(channel_name, "utf-8"), bytes(unit, "utf-8"), ord('f'), 0, 1,
 		rgba8[0], rgba8[1], rgba8[2], rgba8[3],
 		value_limits[0], value_limits[1],
 		portal[0], portal[1], portal[2], portal[3])
