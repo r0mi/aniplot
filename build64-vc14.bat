@@ -28,7 +28,7 @@ set GL3WDIR=.\lib\gl3w
 set IMGUIDIR=.\lib\imgui
 set BUILDDIR=.\build
 
-call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" x64
+call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x64
 
 rmdir /S /Q build
 mkdir build
@@ -49,13 +49,29 @@ cl /FC /MD /Ox /Gy /Fo%BUILDDIR%\ /Fd%BUILDDIR%\ /Fm%BUILDDIR%\ /Fe%BUILDDIR%\an
     /link /SUBSYSTEM:CONSOLE ^
           /LIBPATH:"%SDL2DIR%\lib\x64" /OPT:REF /OPT:ICF
 
+if %errorlevel% neq 0 goto error
 
 rmdir /S /Q dist
 mkdir dist
 copy %BUILDDIR%\aniplot.exe .\dist\
 copy %SDL2DIR%\lib\x64\SDL2.dll .\dist\
 
+if %errorlevel% neq 0 goto error
+
 if exist "upx.exe" (
     upx --lzma .\dist\aniplot.exe
     upx --lzma .\dist\SDL2.dll
 )
+
+echo(
+echo ------------------------------
+echo enjoy aniplot in ./dist folder
+
+goto :EOF
+
+
+:error
+echo(
+echo ------------------------------
+echo Failed with error #%errorlevel%.
+exit /b %errorlevel%
