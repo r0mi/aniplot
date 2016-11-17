@@ -215,6 +215,7 @@ struct GraphVisual {
 		grid_min_div_horizontal_pix = 50.0;
 		grid_min_div_vertical_pix = 100.0;
 		flags = 0;
+		line_width = 1;
 		anchored = true;
 		visible = true;
 		// mirror horizontally. pixel coordinates start from top, but we want values start from bottom.
@@ -237,7 +238,7 @@ struct GraphVisual {
 	ImVec4        grid_legend_color;
 	float         grid_min_div_horizontal_pix;
 	float         grid_min_div_vertical_pix;
-	float         line_width;     // in pixels
+	float         line_width;     // thickness of the data-line in pixels
 	bool          anchored;       // newest sample is anchored to the right window edge.
 	bool          visible;        // graph line rendered or not.
 	uint32_t      flags;          // GraphVisualFlags_
@@ -700,7 +701,7 @@ struct GraphWidget {
 		for (int i = out_start_index + 1; i <= out_end_index; i++) {
 			y2 = (mipbuf->get(i)->avg - (float)screen_sample_portal.min.y) * _screen_sample_portal_height;
 			x2 += dpixel;
-			draw_list->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), linecolor);
+			draw_list->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), linecolor, graph_visual.line_width);
 			x1 = x2; y1 = y2;
 
 			//p1 = screen_sample_portal.proj_vout( ImVec2d(out_start_sample + dsample * c, mipbuf->get(i)->avg) );
@@ -770,8 +771,8 @@ public:
 	// channel_id : 0..255
 	// datatype not implemented
 	void update_channel_info(uint8_t stream_id, uint8_t channel_index_in_stream,
-			uint8_t* channel_name, uint8_t* channel_unit, uint8_t datatype, float channel_frequency,
-			uint32_t rgba,
+			uint8_t* channel_name, uint8_t* channel_unit, uint8_t datatype,
+			uint32_t rgba, float line_width,
 			float value_min, float value_max,
 			float portal_x1, float portal_y1, float portal_x2, float portal_y2) {
 
@@ -786,6 +787,7 @@ public:
 
 		//visual->set_visual_valuespace_mapping(ImRect(0., 1., 1., -1));
 		visual->line_color = ImColor(rgba);
+		visual->line_width = line_width < 0.001f ? 0.001f : line_width;
 		// How samplevalues should be mapped to a unit-box in valuespace.
 		// ImRect(1, 10,  2, 255) maps samplenum 1 to 0s, sampleval 10 to 0V, samplenum 2 to 1s, sampleval 255 to 1V.
 		channel->set_value_samplespace_mapping(ImRect(portal_x1, portal_y1, portal_x2, portal_y2));
@@ -813,9 +815,11 @@ using namespace std;
 #define P_CHANNEL_INFO 11
 
 #pragma pack(push,1)
+
+/* packet version 1
 struct p_channel_info {
 	uint8_t  packet_type;
-	uint8_t  packet_version;
+	uint8_t  packet_version; // 1
 	uint8_t  stream_id;
 
 	uint8_t  channel_index; // channel index in stream. starts from 0.
@@ -835,7 +839,32 @@ struct p_channel_info {
 	float    portal_y1;
 	float    portal_x2;
 	float    portal_y2;
+};*/
+// packet version 2
+struct p_channel_info {
+	uint8_t  packet_type;
+	uint8_t  packet_version; // 2
+	uint8_t  stream_id;
+
+	uint8_t  channel_index; // channel index in stream. starts from 0.
+	uint8_t  channel_name[51]; // zero-terminated
+	uint8_t  unit[51];  // zero-terminated
+	uint8_t  datatype; // "b", "f", "B", "d", "i", "u", "I", "U", "h", "H"; // only f is supported
+	uint8_t  reserved;
+	uint32_t line_color_rgba;
+	float    line_width;
+	// used to draw visual limits. if you know your signal is for example 0..5V, use 0 as min and 5 as max here.
+	float    value_min;
+	float    value_max;
+	// used to translate and scale the samples to value-space
+	// x1 and y1 is mapped to 0 in value space, x2 and y2 is mapped to 1 in value space.
+	// for example using (0, 5,  1000, 0) maps sample num 1000 to 1s and sampleval 1 to 5V.
+	float    portal_x1;
+	float    portal_y1;
+	float    portal_x2;
+	float    portal_y2;
 };
+
 #pragma pack(pop)
 
 #pragma pack(push,1)
@@ -975,10 +1004,13 @@ public:
 			} else if (packet_type == P_CHANNEL_INFO) {
 
 				p_channel_info* p = (p_channel_info*)rxbuf;
-				if (p->packet_version != 1) continue;
+				if (p->packet_version != 2) {
+					SDL_Log("got packet P_CHANNEL_INFO version %i but waited for version 2\n", p->packet_version);
+					continue;
+				}
 
 				graph_world.update_channel_info(p->stream_id, p->channel_index,
-					p->channel_name, p->unit, p->datatype, p->frequency, p->rgba,
+					p->channel_name, p->unit, p->datatype, p->line_color_rgba, p->line_width,
 					p->value_min, p->value_max,
 					p->portal_x1, p->portal_y1, p->portal_x2, p->portal_y2);
 			}
