@@ -1031,6 +1031,15 @@ ImRect get_window_coords() {
 int main(int, char**)
 {
 	SDL_Log("initializing SDL\n");
+	SDL_version compiled;
+	SDL_version linked;
+
+	SDL_VERSION(&compiled);
+	SDL_GetVersion(&linked);
+
+	SDL_Log("Compiled against SDL version %d.%d.%d", compiled.major, compiled.minor, compiled.patch);
+	SDL_Log("Linking against SDL version %d.%d.%d.\n", linked.major, linked.minor, linked.patch);
+	//SDL_Log("Performance counter frequency: %"SDL_PRIu64"", (uint64_t)SDL_GetPerformanceFrequency());
 
 	char dirbuf[10000];
 	SDL_Log("wd: %s\n", getcwd(dirbuf, sizeof(dirbuf)));
@@ -1139,6 +1148,8 @@ int main(int, char**)
 	}
 #endif
 
+	bool window_hidden = false;
+
 	// Main loop
 	bool done = false;
 	while (!done) {
@@ -1146,6 +1157,16 @@ int main(int, char**)
 		while (SDL_PollEvent(&event)) {
 			ImGui_ImplSdlGL3_ProcessEvent(&event);
 			if (event.type == SDL_QUIT) done = true;
+			if (event.type == SDL_WINDOWEVENT) {
+				if (event.window.event == SDL_WINDOWEVENT_HIDDEN) {
+					//SDL_Log("event SDL_WINDOWEVENT_HIDDEN");
+					window_hidden = true;
+				}
+				if (event.window.event == SDL_WINDOWEVENT_SHOWN) {
+					//SDL_Log("event SDL_WINDOWEVENT_SHOWN");
+					window_hidden = false;
+				}
+			}
 			if (event.type == SDL_KEYDOWN) {
 				if (event.key.keysym.sym == SDLK_ESCAPE) done = true;
 			}
@@ -1159,10 +1180,12 @@ int main(int, char**)
 		// remove borders, titlebar, menus, ..
 		// TODO: change window margins?
 
+		//float v = sin(milliseconds / 3. * M_PI / 180.);
+		//graph_channel.data_channel.append_minmaxavg(v, v, v);
 
-		//ImGui::ShowTestWindow();
+		windows_udp_listener.tick(graph_world);
 
-		if (1) {
+		if (1 && !window_hidden) {
 			float prev_bgalpha = GImGui->Style.WindowFillAlphaDefault; // PushStyleVar() doesn't seem to support this yet
 			GImGui->Style.WindowFillAlphaDefault = 0.;
 			ImGui::SetNextWindowSize(io.DisplaySize, ImGuiSetCond_Always);
@@ -1171,13 +1194,6 @@ int main(int, char**)
 						 ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
 						 ImGuiWindowFlags_ShowBorders);
 			GImGui->Style.WindowFillAlphaDefault = prev_bgalpha;
-
-			uint32_t milliseconds = SDL_GetTicks();
-
-			//float v = sin(milliseconds / 3. * M_PI / 180.);
-			//graph_channel.data_channel.append_minmaxavg(v, v, v);
-
-			windows_udp_listener.tick(graph_world);
 
 			//for (auto graph : graph_world) {}
 			graph_world.graph_widgets[0]->DoGraph(ImVec2(1000, 600));
@@ -1195,7 +1211,7 @@ int main(int, char**)
 		}
 
 
-		if (0) {
+		if (0 && !window_hidden) {
 
 			// testing ground
 
@@ -1258,11 +1274,70 @@ int main(int, char**)
 		//ImGui::ShowTestWindow(&show_test_window);
 
 		// Rendering
-		glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-		glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
-		glClear(GL_COLOR_BUFFER_BIT);
-		ImGui::Render();
-		SDL_GL_SwapWindow(window);
+		if (!window_hidden) {
+			glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+			glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+			glClear(GL_COLOR_BUFFER_BIT);
+			ImGui::Render();
+		}
+
+		#if defined(__APPLE__)
+			// test if 10 last swaps were instantaneous and conclude that on macos the aniplot window is
+			// currently occluded and disable all rendering.
+
+			// At the moment, as soon as the aniplot window is occluded by a window, cpu usage raises to
+			// 100% on macos because why not. SDL_GL_SwapWindow returns immediately. Also something to do
+			// with the App Nap feature.
+			//
+			// If we'd care to be "responsible" here, we'd use the new windowDidChangeOcclusionState API,
+			// but to get that notification from the objective c runtime requires a lot of swearing and
+			// sacrificing out whole "build" system. yeah, not gonna consider it. The bad side-effect of
+			// this is that with vsync turned off, nothing gets rendered at all. Let's wait until SDL2
+			// add support for the necessary feature.. glfw seems to have it, but is too big.
+
+			// num of consequent fast SDL_GL_SwapWindow calls, hopefully indicating that the window is occluded.
+			static int num_immediate_swaps;
+			// num of consequent slow SDL_GL_SwapWindow calls, hopefully indicating a visible window.
+			static int num_slow_swaps;
+
+			uint64_t t1 = SDL_GetPerformanceCounter();
+			SDL_GL_SwapWindow(window);
+			uint64_t t2 = SDL_GetPerformanceCounter();
+			float dt = (float)(t2 - t1) / SDL_GetPerformanceFrequency();
+			//SDL_Log("dt %f uint32_t %i", dt, uint32_t(t2 - t1));
+
+			// If less than 0.5 milliseconds. strange things may start to happen if cpu usage raises to
+			// about 97% (16ms/0.5ms=3.2%, 100-3.2=97). To be tested.. by the clients..
+			if (dt > 0.0005) {
+				num_immediate_swaps = 0;
+				num_slow_swaps++;
+			} else {
+				num_immediate_swaps++;
+				num_slow_swaps = 0;
+			}
+
+			// decide if resume rendering or not. with hysteresis.
+			if (window_hidden) {
+				if (num_slow_swaps > 10) {
+					//SDL_Log("window visible");
+					window_hidden = false;
+				}
+			} else {
+				if (num_immediate_swaps > 10) {
+					//SDL_Log("window hidden");
+					window_hidden = true;
+				}
+			}
+
+			if (window_hidden) {
+				// just sleep a bit. handle sdl events, but do no rendering.
+				SDL_Delay(10);
+			}
+		#else
+
+			SDL_GL_SwapWindow(window);
+
+		#endif
 	}
 
 	// Cleanup
