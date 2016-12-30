@@ -21,7 +21,7 @@ public:
 	ImguiTextwrap();
 	virtual ~ImguiTextwrap() {};
 
-	void init(ImFont* font);
+	void init(ImFont* font, ImDrawList* drawlist=NULL);
 
 	// return string size in pixels
 	ImVec2 size(const char* text);
@@ -63,6 +63,7 @@ public:
 	ImVec4 fgcolor;
 	ImVec4 bgcolor;
 	ImFont* font;
+	ImDrawList* drawlist;
 
 private:
 
@@ -72,6 +73,7 @@ private:
 ImguiTextwrap::ImguiTextwrap()
 {
 	this->font = NULL;
+	this->drawlist = NULL;
 	this->height = 0.;
 	this->fgcolor = ImVec4(1., 1., 1., 1.);
 	this->bgcolor = ImVec4(1., 1., 1., 0.);
@@ -83,10 +85,11 @@ ImguiTextwrap::ImguiTextwrap()
 // --------------------------------------------------------------------------
 
 
-void ImguiTextwrap::init(ImFont* font) {
+void ImguiTextwrap::init(ImFont* font, ImDrawList* drawlist) {
 	IM_ASSERT(font);
 	this->font = font;
 	this->height = font->FontSize;
+	this->drawlist = drawlist;
 }
 
 // Calculate text size. Text can be multi-line.
@@ -146,12 +149,16 @@ void ImguiTextwrap::draw(const char* text, float x, float y, int positioning)
 	if (str_size.x > 0) {
 		x = floor(x);
 		y = floor(y);
-		// draw the background
-		if (bgcolor.w != 0) {
-			ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(x, y), ImVec2(x + str_size.x + 1, y + this->font->FontSize), ImColor(bgcolor));
+		ImDrawList *dl = (this->drawlist != NULL) ? this->drawlist : ImGui::GetWindowDrawList();
+		if (dl) {
+			// draw the background
+			if (bgcolor.w != 0) {
+				dl->AddRectFilled(ImVec2(x, y), ImVec2(x + str_size.x + 1, y + this->font->FontSize),
+				                  ImColor(bgcolor));
+			}
+			// draw the text
+			dl->AddText(this->font, this->font->FontSize, ImVec2(x, y), ImColor(fgcolor), text, NULL, 0, NULL);
 		}
-		// draw the text
-		ImGui::GetWindowDrawList()->AddText(this->font, this->font->FontSize, ImVec2(x, y), ImColor(fgcolor), text, NULL, 0, NULL);
 	}
 }
 

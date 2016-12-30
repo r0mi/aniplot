@@ -62,7 +62,7 @@ struct ImVec2d
 	ImVec2d(const ImVec2& v) { x = v.x; y = v.y; }
 
 	//const ImVec2 &toImVec2() { return ImVec2(x, y); };
-	ImVec2 toImVec2() { return ImVec2(x, y); };
+	ImVec2 toImVec2() { return ImVec2(float(x), float(y)); };
 };
 
 static inline ImVec2d operator*(const ImVec2d& lhs, const double rhs)             { return ImVec2d(lhs.x*rhs, lhs.y*rhs); }
@@ -294,44 +294,63 @@ struct GraphWidget {
 	// DoSpecialGraph - for example something that renders some buttons, special application-specific ui, .., to the same window.
 	//void DoGraph(const ImVec2& size) {}
 
+	// TODO: make it really widgetable
+
 	// size in pixels, with scrollbars (if scrollbars are turned on)
-	void DoGraph(const ImVec2& size) {
+	void DoGraph(const char* unique_name) { //, const ImVec2& pos, const ImVec2& size) {
 
 		if (!m_textrend->font) m_textrend->init(ImGui::GetWindowFont());
 
 		ImGuiWindow* window = ImGui::GetCurrentWindow();
 		if (window->SkipItems) return;
-		if (size.y <= 0 || size.x <= 0) return;
+		//if (size.y <= 0 || size.x <= 0) return;
 		if (!graph_visuals.size()) return;
 
 		GraphVisual& graph_visual = *graph_visuals[0];
 		IM_ASSERT(graph_visual.graph_channel);
 		GraphChannel& graph_channel = *graph_visual.graph_channel;
 
-		//const ImRect bb(ImGui::GetWindowPos(), ImGui::GetWindowPos()+ImGui::GetWindowSize());
-		//const ImRect bb(window->DC.CursorPos, window->DC.CursorPos+size);
-		const ImRect bb(window->DC.CursorPos, window->DC.CursorPos+ImGui::GetContentRegionAvail());
+		ImVec2 cursor_screenspace = ImGui::GetCursorScreenPos();
+		const ImRect bb(cursor_screenspace, cursor_screenspace+ImGui::GetContentRegionAvail());
 
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+		// TODO: test limits here. text seemed to go outside?
 		draw_list->PushClipRect(ImVec4(bb.Min.x, bb.Min.y, bb.Max.x, bb.Max.y));
 
-		// TODO: this name here might be not the right thing to use
-		const ImGuiID id = window->GetID(graph_channel.name.c_str());
+		const ImGuiID id = window->GetID(unique_name);
 
 		ImGuiState& g = *GImGui;
+		ImGuiIO& io = ImGui::GetIO();
 		const ImGuiStyle& style = g.Style;
 
-		ImGui::ItemSize(bb, style.FramePadding.y);
+		//ImGui::ItemSize(bb, style.FramePadding.y); // advances cursor. not needed here.
 		if (!ImGui::ItemAdd(bb, &id))
-			return;
+			return; // outside of screen. or also behind something?
 
 		PortalRect screen_visualspace_portal(bb);
 		ImVec2d visualmousecoord = screen_visualspace_portal.proj_vout(g.IO.MousePos); // mouse coord in graph visualspace. 0,0 is top-left corner of the graph, 1,1 bottom-right.
 
 		//LOG_IMVEC2(visualmousecoord);
 
-		//int v_hovered = -1;
-		const bool hovered = ImGui::IsHovered(bb, 0);
+		const bool hovered = ImGui::IsHovered(bb, id);
+		if (hovered) {
+			ImGui::SetHoveredID(id);
+		}
+
+		const bool tab_focus_requested = ImGui::FocusableItemRegister(window, g.ActiveId == id);
+		if ((tab_focus_requested || (hovered && (g.IO.MouseClicked[0] | g.IO.MouseDoubleClicked[0])))) {
+			ImGui::SetActiveID(id, window);
+			ImGui::FocusWindow(window);
+		}
+
+		ImGui::SetItemAllowOverlap();
+
+		if (g.ActiveId == id) {
+			if (g.IO.MouseDown[0]) {
+			} else {
+				ImGui::SetActiveID(0, NULL);
+			}
+		}
 
 		if (hovered) {
 			ImGuiIO& io = ImGui::GetIO();
@@ -355,20 +374,13 @@ struct GraphWidget {
 		//if (hovered)
 		//    g.HoveredId = id;
 
-		if (hovered && g.IO.MouseClicked[0])
-		{
-			//GImGui->IO.MousePos
-			m_dragging = true;
-			//GetMouseDragDelta();
-		//    SetActiveID(id, window);
-		//    FocusWindow(window);
+		bool dragging = false;
+
+		if (g.ActiveId == id && g.IO.MouseDown[0] && !g.ActiveIdIsJustActivated) {
+			dragging = true;
 		}
 
-		if (!g.IO.MouseDown[0]) {
-			m_dragging = false;
-		}
-
-		if (m_dragging) {
+		if (dragging) {
 			// TODO: floating-point problems. different graphs might drift apart.
 			//       correct way to solve it would be to make GraphVisual recursive (be able to contain a list of GraphVisual objects)
 			//       and here move only the top-level GraphVisual portal.
@@ -562,15 +574,22 @@ struct GraphWidget {
 	}
 
 	void _render_legend(const ImRect& canvas_bb) {
-		int text_h = this->m_textrend->height + 10; // TODO: text height seems to be wrong
+		// canvas_bb : screenspace, window contents
+		int text_h = ImGui::GetTextLineHeightWithSpacing();
+
+		// save cursor pos so we can restore it later
+		ImVec2 old_cursor_pos = ImGui::GetCursorPos();
 
 		// TODO: how the f does this work? + 4 is for top padding, but we also have the bottom to take care of, yet everything is perfect with 4 instead of 8 here.
 		int h = text_h * graph_visuals.size() + 4; // checkbox height with builtin padding
 		int w = text_h * 10; // roughly how many characters wide. works only with square fonts
-		int x = canvas_bb.Min.x + 80;
-		int y = canvas_bb.Max.y - h - 40;
+		int x = canvas_bb.Min.x + 43;
+		int y = canvas_bb.Max.y - h - 20;
+
+		ImGui::SetCursorScreenPos(ImVec2(x,y));
 
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+		// screenspace coordinates
 		ImVec2 p_min = ImVec2(x, y);
 		ImVec2 p_max = ImVec2(x+w, y+h);
 
@@ -583,26 +602,32 @@ struct GraphWidget {
 
 		x += 4; y += 4; // pad
 
-		ImGui::SetCursorPos(ImVec2(x,y));
+		ImGui::SetCursorScreenPos(ImVec2(x,y));
 		ImGui::BeginGroup();
 
 		for (int i = 0; i < graph_visuals.size(); i++) {
 
 			if (!graph_visuals[i]->graph_channel) continue;
-			ImGui::PushID(i);
+			ImGui::PushID(i+100);
 			ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(graph_visuals[i]->line_color));
 
-			ImGui::Checkbox(graph_visuals[i]->graph_channel->name.c_str(), &graph_visuals[i]->visible);
+				ImGui::Checkbox(graph_visuals[i]->graph_channel->name.c_str(), &graph_visuals[i]->visible);
+
 			ImGui::PopStyleColor(1);
 			ImGui::PopID();
 
 			// draw little horizontal line (with current graph color) inside the checkbox if checkbox is not set.
 			if (!graph_visuals[i]->visible) {
-				float line_y = y + text_h * i + text_h/2 - 1;
-				draw_list->AddLine(ImVec2(x + 3, line_y), ImVec2(x + 16, line_y), ImColor(graph_visuals[i]->line_color)); // ImColor(graph_visual.ver_grid_color));
+				ImVec2 cursor_pos = ImGui::GetCursorScreenPos();
+				float line_y = cursor_pos.y - 11;
+				float line_x = cursor_pos.x + 2;
+				draw_list->AddLine(ImVec2(line_x, line_y), ImVec2(line_x + 9, line_y), ImColor(graph_visuals[i]->line_color)); // ImColor(graph_visual.ver_grid_color));
 			}
 		}
 		ImGui::EndGroup();
+
+		// restore cursor pos
+		ImGui::SetCursorPos(old_cursor_pos);
 	}
 
 	void _grid_timestr(double seconds, double step, char* outstr, int outstr_size) {
@@ -718,7 +743,7 @@ struct GraphWidget {
 
 	// graph is moving from right to left? newest sample is anchored to the right window edge.
 	bool anchored;
-	bool m_dragging;
+	//bool m_dragging;
 
 	ImguiTextwrap* m_textrend;
 };
@@ -737,25 +762,37 @@ typedef std::shared_ptr<GraphChannel> GraphChannelPtr;
 typedef std::shared_ptr<GraphVisual>  GraphVisualPtr;
 
 
-
+// TODO: oh this naming... so wrong.. can't do better on christmas
 struct GraphWorldStream {
-	GraphWorldStream(): stream_id(0) {}
-	uint8_t stream_id;
+	GraphWorldStream(): stream_id(0), initialized(false), graph_widget(new GraphWidget) {}
+	uint8_t stream_id; // 0 is also valid
+	bool initialized; // x,y,x,h have values
+	// coordinates on screen, all 4 are 0..1
+	float x, y;
+	float w, h;
 	std::vector<GraphChannelPtr> graph_channels;
 	std::vector<GraphVisualPtr>  graph_visuals;
+	GraphWidgetPtr graph_widget;
 };
+
 
 // Holds streams.
 // A stream can consist of multiple channels.
 // Channels can be mapped to different graph_widgets. (well not yet)
+// a visual can be set to always anchored, and return to default zoom after some time? (not yet)
+
+// widgetscontainer
 
 class GraphWorld
 {
 public:
-	GraphWorld() { graph_widgets.push_back(GraphWidgetPtr(new GraphWidget)); }
+	GraphWorld() {
+
+		_fill_stream_with_channels(0, 1);
+		update_stream_info(0,  0, 0, 1, 1); // full window size graph
+	}
 
 	GraphWorldStream streams[255];
-	std::vector<GraphWidgetPtr> graph_widgets;
 
 	inline GraphChannel* get_graph_channel(uint8_t stream_id, uint8_t channel_index_in_stream) {
 		// ensure that the wanted channel exists
@@ -796,6 +833,20 @@ public:
 		channel->unit = (char*)channel_unit;
 	}
 
+	// x, y, w, h : all 0..1
+	void update_stream_info(uint8_t stream_id, float x1, float y1, float x2, float y2)
+	{
+		if (x2 < x1 || y2 < y1) return;
+
+		_fill_stream_with_channels(stream_id, 1);
+		streams[stream_id].x = x1;
+		streams[stream_id].y = y1;
+		streams[stream_id].w = x2 - x1;
+		streams[stream_id].h = y2 - y1;
+		streams[stream_id].stream_id = stream_id;
+		streams[stream_id].initialized = true;
+	}
+
 	// make sure stream contains at least num_channels
 	void _fill_stream_with_channels(uint8_t stream_id, uint8_t num_channels) {
 		while (streams[stream_id].graph_channels.size() < num_channels) {
@@ -803,7 +854,7 @@ public:
 			GraphVisualPtr  visual  = GraphVisualPtr(new GraphVisual(channel.get()));
 			streams[stream_id].graph_channels.push_back(channel);
 			streams[stream_id].graph_visuals.push_back(visual);
-			graph_widgets[0]->add_graph(visual.get());
+			streams[stream_id].graph_widget->add_graph(visual.get());
 		}
 	}
 };
@@ -813,6 +864,7 @@ using namespace std;
 
 #define P_CHANNEL_SAMPLES 10
 #define P_CHANNEL_INFO 11
+#define P_LAYOUT 12
 
 #pragma pack(push,1)
 
@@ -840,7 +892,23 @@ struct p_channel_info {
 	float    portal_x2;
 	float    portal_y2;
 };*/
-// packet version 2
+
+// stream position on screen. coordinates 0..1, x2 has to be > x1, same for y.
+struct stream_pos_t {
+	uint8_t stream_id;
+	float   x1;
+	float   y1;
+	float   x2;
+	float   y2;
+};
+
+struct p_layout {
+	uint8_t packet_type;
+	uint8_t packet_version; // 1
+	uint8_t num_streams; // how many stream_pos_t structs follow
+	stream_pos_t stream_pos[];
+};
+
 struct p_channel_info {
 	uint8_t  packet_type;
 	uint8_t  packet_version; // 2
@@ -984,35 +1052,95 @@ public:
 
 		int n = 1;
 		while (n > 0) {
+			bool packet_decoding_error = false;
 			n = _recvfrom(rxbuf, sizeof(rxbuf));
-			if (n <= 0) break;
+			if (n < 2) break; // ignore packet if doesn't have at least packet_type and packet_version bytes.
+			// TODO: rename n -> packet_len
 
 			uint8_t packet_type = rxbuf[0];
 
-			if (packet_type == P_CHANNEL_SAMPLES && n > sizeof(p_channel_samples)) {
+			switch (packet_type) {
+			case P_CHANNEL_SAMPLES: {
 
-				p_channel_samples* p = (p_channel_samples*)rxbuf;
-				if (p->packet_version != 1) continue;
+				p_channel_samples *p = (p_channel_samples *) rxbuf;
+				if (p->packet_version != 1) {
+					SDL_Log("ERROR: got packet P_CHANNEL_SAMPLES version %i but waited for version 1",
+					        p->packet_version);
+					packet_decoding_error = true;
+					break;
+				}
 
-				GraphChannel* graph_channel = graph_world.get_graph_channel(p->stream_id, p->channel_index);
+				if (n <= sizeof(p_channel_samples)) {
+					SDL_Log("ERROR: got packet P_CHANNEL_SAMPLES but no samples in packet");
+					packet_decoding_error = true;
+					break;
+				}
+
+				GraphChannel* graph_channel = graph_world.get_graph_channel(p->stream_id,
+				                                                            p->channel_index);
 				float* samples = &p->samples[0];
 				for (int i = 0; i < p->samples_bytes / 4; i++) {
 					float v = samples[i];
 					graph_channel->append_sample_minmaxavg(v, v, v);
 				}
-
-			} else if (packet_type == P_CHANNEL_INFO) {
+				break;
+			}
+			case P_CHANNEL_INFO: {
 
 				p_channel_info* p = (p_channel_info*)rxbuf;
 				if (p->packet_version != 2) {
-					SDL_Log("got packet P_CHANNEL_INFO version %i but waited for version 2\n", p->packet_version);
-					continue;
+					SDL_Log("ERROR: got packet P_CHANNEL_INFO version %i but waited for version 2",
+					        p->packet_version);
+					packet_decoding_error = true;
+					break;
 				}
 
 				graph_world.update_channel_info(p->stream_id, p->channel_index,
-					p->channel_name, p->unit, p->datatype, p->line_color_rgba, p->line_width,
-					p->value_min, p->value_max,
-					p->portal_x1, p->portal_y1, p->portal_x2, p->portal_y2);
+				                                p->channel_name, p->unit, p->datatype,
+				                                p->line_color_rgba, p->line_width,
+				                                p->value_min, p->value_max,
+				                                p->portal_x1, p->portal_y1, p->portal_x2, p->portal_y2);
+				break;
+			}
+			case  P_LAYOUT: {
+
+				p_layout* p = (p_layout*)rxbuf;
+				if (p->packet_version != 1) {
+					SDL_Log("ERROR: got packet P_LAYOUT version %i but waited for version 1",
+					        p->packet_version);
+					packet_decoding_error = true;
+					break;
+				}
+
+				if (n < 3) {
+					packet_decoding_error = true;
+					break;
+				}
+
+				if (sizeof(p_layout) + p->num_streams * sizeof(stream_pos_t) != n) {
+					SDL_Log("ERROR: got packet P_LAYOUT with wrong length");
+					packet_decoding_error = true;
+					break;
+				}
+
+				for (int i = 0; i < p->num_streams; i++) {
+					stream_pos_t& sp = p->stream_pos[i];
+					if (sp.x2 < sp.x1 || sp.y2 < sp.y1) {
+						SDL_Log("ERROR: got packet P_LAYOUT with rectangle x2 < x1 or y2 < y1");
+						packet_decoding_error = true;
+						continue;
+					}
+					graph_world.update_stream_info(sp.stream_id, sp.x1, sp.y1, sp.x2, sp.y2);
+				}
+
+				break;
+			}
+			default: break;
+			}
+
+
+			if (packet_decoding_error) {
+				// TODO: print out the hex-encoded packet}
 			}
 		}
 
@@ -1030,7 +1158,7 @@ ImRect get_window_coords() {
 
 int main(int, char**)
 {
-	SDL_Log("initializing SDL\n");
+	SDL_Log("initializing SDL");
 	SDL_version compiled;
 	SDL_version linked;
 
@@ -1038,7 +1166,7 @@ int main(int, char**)
 	SDL_GetVersion(&linked);
 
 	SDL_Log("Compiled against SDL version %d.%d.%d", compiled.major, compiled.minor, compiled.patch);
-	SDL_Log("Linking against SDL version %d.%d.%d.\n", linked.major, linked.minor, linked.patch);
+	SDL_Log("Linking against SDL version %d.%d.%d.", linked.major, linked.minor, linked.patch);
 	//SDL_Log("Performance counter frequency: %"SDL_PRIu64"", (uint64_t)SDL_GetPerformanceFrequency());
 
 	char dirbuf[10000];
@@ -1046,7 +1174,7 @@ int main(int, char**)
 
 	//if (SDL_Init(SDL_INIT_VIDEO) != 0) {
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-		SDL_Log("SDL_Init error: %s\n", SDL_GetError());
+		SDL_Log("SDL_Init error: %s", SDL_GetError());
 		return -1;
 	}
 
@@ -1057,8 +1185,6 @@ int main(int, char**)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-	SDL_Log("SDL_CreateWindow\n");
 
 	window = SDL_CreateWindow(
 			"Telemetry",
@@ -1071,8 +1197,6 @@ int main(int, char**)
 		SDL_Log("SDL_CreateWindow error: %s\n", SDL_GetError());
 		return -1;
 	}
-
-	SDL_Log("SDL_GL_CreateContext\n");
 
 	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
 	if (gl_context == NULL) {
@@ -1100,7 +1224,8 @@ int main(int, char**)
 
 	// --------------------------------------------------------------------
 
-	ImVec4 clear_color = ImColor(114, 144, 154);
+	//ImVec4 clear_color = ImColor(114, 144, 154);
+	ImVec4 clear_color = ImColor(128, 128, 128);
 	ImguiTextwrap textrend;
 
 	GraphWorld graph_world;
@@ -1175,46 +1300,103 @@ int main(int, char**)
 
 		ImGuiIO &io = ImGui::GetIO();
 
-		// make the window always fullsize.
-		// disable window background rendering.
-		// remove borders, titlebar, menus, ..
-		// TODO: change window margins?
-
 		//float v = sin(milliseconds / 3. * M_PI / 180.);
 		//graph_channel.data_channel.append_minmaxavg(v, v, v);
 
 		windows_udp_listener.tick(graph_world);
 
-		if (1 && !window_hidden) {
-			float prev_bgalpha = GImGui->Style.WindowFillAlphaDefault; // PushStyleVar() doesn't seem to support this yet
-			GImGui->Style.WindowFillAlphaDefault = 0.;
-			ImGui::SetNextWindowSize(io.DisplaySize, ImGuiSetCond_Always);
-			ImGui::Begin("Robot", NULL,
-						 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
-						 ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
-						 ImGuiWindowFlags_ShowBorders);
-			GImGui->Style.WindowFillAlphaDefault = prev_bgalpha;
+		if (!window_hidden) {
 
-			//for (auto graph : graph_world) {}
-			graph_world.graph_widgets[0]->DoGraph(ImVec2(1000, 600));
+			// Create the global background window (will never raise to front) and render fps
+			// to the always-on-top imgui OverlayDrawList.
 
-			if (!textrend.font) textrend.init(ImGui::GetWindowFont());
+			{
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
 
-			char txt[50];
-			ImFormatString(txt, sizeof(txt), "fps: %.1f (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-			ImRect windim = get_window_coords();
-			textrend.set_bgcolor(ImColor(80,80,80,100));
-			textrend.set_fgcolor(ImColor(255,255,255,100));
-			textrend.drawtr(txt, windim.Max.x - 14, windim.Min.y + 14);
+				// OverlayDrawList should work without this window, but for some reason the fps display
+				// positioning was wrong. So we still need to create the background window although
+				// it's unused.
+				ImGui::SetNextWindowSize(io.DisplaySize, ImGuiSetCond_Always);
+				ImGui::Begin("Robot", NULL, ImVec2(0.f, 0.f), 0.f,
+				             ImGuiWindowFlags_NoTitleBar |
+				             ImGuiWindowFlags_NoMove |
+				             ImGuiWindowFlags_NoResize |
+				             ImGuiWindowFlags_NoCollapse |
+				             ImGuiWindowFlags_NoSavedSettings |
+				             ImGuiWindowFlags_NoScrollbar |
+				             ImGuiWindowFlags_NoBringToFrontOnFocus |
+				             ImGuiWindowFlags_NoInputs |
+				             ImGuiWindowFlags_NoFocusOnAppearing);
 
-			ImGui::End();
+				if (!textrend.font)
+					textrend.init(ImGui::GetIO().Fonts->Fonts[0], &GImGui->OverlayDrawList);
+
+				char txt[50];
+				ImFormatString(txt, sizeof(txt), "fps: %.1f (%.3f ms)", ImGui::GetIO().Framerate,
+				               1000.0f / ImGui::GetIO().Framerate);
+				ImRect windim = get_window_coords();
+				textrend.set_bgcolor(ImColor(80, 80, 80, 100));
+				textrend.set_fgcolor(ImColor(255, 255, 255, 100));
+				textrend.drawtr(txt, windim.Max.x, windim.Min.y);
+
+				ImGui::End();
+				ImGui::PopStyleVar(2);
+			}
+
+			//
+			// scan through all graph_world.streams and render what are active
+			//
+
+			for (int i = 0; i < 256; i++) {
+
+				if (!graph_world.streams[i].initialized)
+					continue;
+
+				GraphWorldStream& gr = graph_world.streams[i];
+
+				// +1 trick allows to get exact positioning with 1 pixel between widgets and 0 borderpixels.
+				float calc_width = ImGui::GetIO().DisplaySize.x + 1;
+				float calc_height = ImGui::GetIO().DisplaySize.y + 1;
+				float graph_x1 = gr.x * calc_width;
+				float graph_y1 = gr.y * calc_height;
+				float graph_x2 = gr.x * calc_width + gr.w * calc_width - 1.f;
+				float graph_y2 = gr.y * calc_height + gr.h * calc_height - 1.f;
+				int graph_w = int(graph_x2 + 0.5) - int(graph_x1 + 0.5);
+				int graph_h = int(graph_y2 + 0.5) - int(graph_y1 + 0.5);
+
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+				// TODO: check if still draws background?
+				//ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0);
+
+				ImGui::SetNextWindowSize(ImVec2(graph_w, graph_h), ImGuiSetCond_Always);
+				ImGui::SetNextWindowContentSize(ImVec2(graph_w, graph_h));
+				ImGui::SetNextWindowPos(
+						ImVec2(int(graph_x1 + 0.5f), int(graph_y1 + 0.5f)),
+						ImGuiSetCond_Always);
+
+				char temp_window_name[255];
+				ImFormatString(temp_window_name, sizeof(temp_window_name), "Robota-%i", i);
+
+				ImGui::Begin(temp_window_name, NULL, ImVec2(0.f, 0.f), 0.f,
+				             ImGuiWindowFlags_NoTitleBar |
+				             ImGuiWindowFlags_NoMove |
+				             ImGuiWindowFlags_NoResize |
+				             ImGuiWindowFlags_NoCollapse |
+				             ImGuiWindowFlags_NoSavedSettings |
+				             ImGuiWindowFlags_NoScrollbar);
+				ImGui::SetCursorPos(ImVec2(0, 0));
+
+				graph_world.streams[i].graph_widget->DoGraph(temp_window_name);
+				ImGui::End();
+
+				ImGui::PopStyleVar(2);
+			}
 		}
 
-
+		// testing ground
 		if (0 && !window_hidden) {
-
-			// testing ground
-
 			ImGui::Begin("deb", NULL);
 
 			ImFont *f = ImGui::GetWindowFont();
@@ -1273,13 +1455,21 @@ int main(int, char**)
 		//static bool show_test_window;
 		//ImGui::ShowTestWindow(&show_test_window);
 
-		// Rendering
+		//
+		// Finally give the GPU something to do. Clear the screen and render the accumulated vertex buffers.
+		//
+
 		if (!window_hidden) {
 			glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
 			glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 			glClear(GL_COLOR_BUFFER_BIT);
 			ImGui::Render();
 		}
+
+		//
+		// Swap the backbuffer to monitor. Just a simple SDL_GL_SwapWindow() call for windows and linux,
+		// but macos has to have some magic.
+		//
 
 		#if defined(__APPLE__)
 			// test if 10 last swaps were instantaneous and conclude that on macos the aniplot window is
