@@ -30,8 +30,6 @@
 #undef min
 #undef max
 
-using namespace std;
-
 SDL_Window* window = NULL;
 
 #define IM_ARRAYSIZE(_ARR)  ((int)(sizeof(_ARR)/sizeof(*_ARR)))
@@ -222,6 +220,7 @@ struct GraphVisual {
 		//portal = PortalRect(0,1, 1,0);
 		// also set y zero to center of the window
 		portal = PortalRect(0,1, 1,-1);
+		initialized = false;
 	}
 
 	GraphChannel* graph_channel;  // GraphVisual does NOT take ownership of the graph_channel.
@@ -243,6 +242,7 @@ struct GraphVisual {
 	bool          visible;        // graph line rendered or not.
 	uint32_t      flags;          // GraphVisualFlags_
 	PortalRect    portal;         // Everything coming out of this portal between 0..1 is visible. Resides in value-space.
+	bool          initialized;
 
 	// // zoom: visualcenterpos: coordinates on the graph window around which everything changes. usually the coordinates under the mouse. 0..1
 	void resize_by_ratio(const ImVec2d& center, const ImVec2d& ratio) { portal.resize_by_ratio(portal.proj_vin(center), ratio); }
@@ -792,7 +792,7 @@ public:
 		update_stream_info(0,  0, 0, 1, 1); // full window size graph
 	}
 
-	GraphWorldStream streams[255];
+	GraphWorldStream streams[256];
 
 	inline GraphChannel* get_graph_channel(uint8_t stream_id, uint8_t channel_index_in_stream) {
 		// ensure that the wanted channel exists
@@ -822,6 +822,19 @@ public:
 		GraphChannel* channel = stream->graph_channels[channel_index_in_stream].get();
 		GraphVisual*  visual  = stream->graph_visuals[channel_index_in_stream].get();
 
+		// keep value_max always larger/equal than value_min
+		if (value_min > value_max) {
+			float d = value_max;
+			value_min = value_max;
+			value_max = d;
+		}
+
+		if (!visual->initialized) {
+			visual->initialized = true;
+			float h = value_max - value_min;
+			// set height of the portal to contain the whole expected value range plus 10% from top/bottom.
+			visual->set_visual_valuespace_mapping(ImRect(0,value_max+h*0.1, 1,value_min-h*0.1));
+		}
 		//visual->set_visual_valuespace_mapping(ImRect(0., 1., 1., -1));
 		visual->line_color = ImColor(rgba);
 		visual->line_width = line_width < 0.001f ? 0.001f : line_width;
@@ -859,8 +872,6 @@ public:
 	}
 };
 
-
-using namespace std;
 
 #define P_CHANNEL_SAMPLES 10
 #define P_CHANNEL_INFO 11
@@ -916,12 +927,14 @@ struct p_channel_info {
 
 	uint8_t  channel_index; // channel index in stream. starts from 0.
 	uint8_t  channel_name[51]; // zero-terminated
-	uint8_t  unit[51];  // zero-terminated
+	uint8_t  unit[51]; // zero-terminated. only used if channel_index is 0.
 	uint8_t  datatype; // "b", "f", "B", "d", "i", "u", "I", "U", "h", "H"; // only f is supported
 	uint8_t  reserved;
 	uint32_t line_color_rgba;
 	float    line_width;
 	// used to draw visual limits. if you know your signal is for example 0..5V, use 0 as min and 5 as max here.
+	// these are only used if channel_index is 0.
+	// TODO: can be swapped? what happens then? if portal is y-mirrored?
 	float    value_min;
 	float    value_max;
 	// used to translate and scale the samples to value-space
@@ -933,9 +946,6 @@ struct p_channel_info {
 	float    portal_y2;
 };
 
-#pragma pack(pop)
-
-#pragma pack(push,1)
 struct p_channel_samples {
 	uint8_t  packet_type;
 	uint8_t  packet_version;
@@ -946,6 +956,7 @@ struct p_channel_samples {
 	uint16_t samples_bytes;
 	float    samples[];
 };
+
 #pragma pack(pop)
 
 

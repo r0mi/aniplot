@@ -42,12 +42,13 @@ struct p_channel_info {
 
 	uint8_t  channel_index; // channel index in stream. starts from 0.
 	uint8_t  channel_name[51]; // zero-terminated
-	uint8_t  unit[51];  // zero-terminated
+	uint8_t  unit[51]; // zero-terminated. only used if channel_index is 0.
 	uint8_t  datatype; // "b", "f", "B", "d", "i", "u", "I", "U", "h", "H"; // only f is supported
 	uint8_t  reserved;
 	uint32_t line_color_rgba;
 	float    line_width; // rendering system will render thinner than 1 as 1 at the moment.
 	// used to draw visual limits. if you know your signal is for example 0..5V, use 0 as min and 5 as max here.
+	// these are only used if channel_index is 0.
 	float    value_min;
 	float    value_max;
 	// used to translate and scale the samples to value-space
@@ -58,9 +59,7 @@ struct p_channel_info {
 	float    portal_x2;
 	float    portal_y2;
 };
-#pragma pack(pop)
 
-#pragma pack(push,1)
 struct p_channel_samples {
 	uint8_t  packet_type;
 	uint8_t  packet_version;
