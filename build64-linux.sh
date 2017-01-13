@@ -17,6 +17,7 @@ else
         $(pkg-config sdl2 --cflags) \
         -std=gnu++11 \
         main.cpp \
+        aniplotlib.cpp \
         ./lib/imgui/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.cpp ./lib/imgui/imgui.cpp ./lib/imgui/imgui_demo.cpp ./lib/imgui/imgui_draw.cpp ./lib/gl3w/GL/gl3w.c \
         -ldl -lGL \
         $(pkg-config sdl2 --libs ) \

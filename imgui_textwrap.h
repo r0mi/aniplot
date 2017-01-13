@@ -8,10 +8,14 @@
 // Makes some simple uses of imgui text rendering api a bit simpler.
 // (text positioning, foreground/background colors)
 //
+// this is a header-file library.
+//    include as usual, but in one file:
+//        #define IMGUI_TEXTWRAP_IMPLEMENTATION
+//        #include "imgui_textwrap.h"
+//
 
-#include <imgui.h>
-//#include "imgui_impl_sdl.h"
-#include "imgui_internal.h" // for custom graph renderer
+#include "imgui.h"
+#include "imgui_internal.h"
 
 
 class ImguiTextwrap
@@ -69,6 +73,11 @@ private:
 
 	void m_fix_pos(float x, float y, float w, int positioning, float* x_fix, float* y_fix);
 };
+
+#endif // IMGUI_TEXTWRAP_H
+
+
+#ifdef IMGUI_TEXTWRAP_IMPLEMENTATION
 
 ImguiTextwrap::ImguiTextwrap()
 {
@@ -195,5 +204,5 @@ void ImguiTextwrap::m_fix_pos(float x, float y, float w, int positioning, float*
 	*y_fix = y;
 }
 
+#endif // IMGUI_TEXTWRAP_IMPLEMENTATION
 
-#endif // IMGUI_TEXTWRAP_H

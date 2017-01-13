@@ -36,6 +36,7 @@ mkdir build
 
 cl /FC /MD /Ox /Gy /Fo%BUILDDIR%\ /Fd%BUILDDIR%\ /Fm%BUILDDIR%\ /Fe%BUILDDIR%\aniplot.exe ^
     main.cpp ^
+    aniplotlib.cpp ^
     %IMGUIDIR%\examples\sdl_opengl3_example\imgui_impl_sdl_gl3.cpp ^
     %IMGUIDIR%\imgui.cpp %IMGUIDIR%\imgui_draw.cpp ^
     %IMGUIDIR%\imgui_demo.cpp ^

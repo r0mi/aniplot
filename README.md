@@ -2,6 +2,24 @@
 
 Hopes to become a fast realtime and non-realtime telemetry graphs browser.
 
+# build
+
+MacOS (tested on Sierra):
+```
+brew install sdl2
+./build64-macosx.sh
+```
+Windows:
+```
+build64-vc12.bat
+or
+build64-vc14.bat
+```
+Linux:
+```
+apt-get install libsdl2-dev ?
+./build64-linux.sh
+```
 
 # credits/dependencies
 
