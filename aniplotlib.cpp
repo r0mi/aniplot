@@ -33,45 +33,58 @@ void GraphWidget::add_graph(GraphVisual* graph_visual)
 	graph_visuals.push_back( graph_visual );
 }
 
-// pos inside area is returned as 0..1
-//ImVec2 _screenpixel_to_visualspace(ImRect area, ImVec2 pos) {}
-
-// DoSpecialGraph - for example something that renders some buttons, special application-specific ui, .., to the same window.
-//void DoGraph(const ImVec2& size) {}
-
 // size in pixels, with scrollbars (if scrollbars are turned on)
-void GraphWidget::DoGraph(const char* unique_name)
+void GraphWidget::DoGraph(const char* label, ImVec2 size)
 {
+	if (!graph_visuals.size())
+		return;
 	if (!m_textrend->font)
 		m_textrend->init(ImGui::GetWindowFont());
 
 	ImGuiWindow* window = ImGui::GetCurrentWindow();
 	if (window->SkipItems)
 		return;
-	//if (size.y <= 0 || size.x <= 0) return;
-	if (!graph_visuals.size())
+
+	ImGuiContext& g = *GImGui;
+	const ImGuiStyle& style = g.Style;
+	const ImGuiID id = window->GetID(label);
+
+	if (size.x <= 0.0f)
+		size.x =  ImGui::GetContentRegionAvail().x; // ImGui::CalcItemWidth() + 200;
+	if (size.y <= 0.0f)
+		size.y = 20 + (style.FramePadding.y * 2);
+
+	const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(size.x, size.y));
+	const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
+	const ImRect total_bb(frame_bb.Min, frame_bb.Max);
+	ImGui::ItemSize(total_bb, style.FramePadding.y);
+	if (!ImGui::ItemAdd(total_bb, &id))
 		return;
+
+	// this renders also the background.
+	// TODO: style.FrameRounding maha ja showborders ka maha.
+	//RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+
+	// this is almost verbatim from ImGui::RenderFrame, but because we render our own background and only want
+	// the border, we copied the border rendering parts here.
+	if (window->Flags & ImGuiWindowFlags_ShowBorders) {
+		window->DrawList->AddRect(frame_bb.Min+ImVec2(1,1), frame_bb.Max+ImVec2(1,1), ImGui::GetColorU32(ImGuiCol_BorderShadow), style.FrameRounding);
+		window->DrawList->AddRect(frame_bb.Min, frame_bb.Max, ImGui::GetColorU32(ImGuiCol_Border), style.FrameRounding);
+	}
 
 	GraphVisual& graph_visual = *graph_visuals[0];
 	IM_ASSERT(graph_visual.graph_channel);
 	GraphChannel& graph_channel = *graph_visual.graph_channel;
 
-	ImVec2 cursor_screenspace = ImGui::GetCursorScreenPos();
-	const ImRect bb(cursor_screenspace, cursor_screenspace+ImGui::GetContentRegionAvail());
+	ImRect bb;
+	bb = inner_bb;
+	//bb = total_bb;
 
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 	// TODO: test limits here. text seemed to go outside?
-	draw_list->PushClipRect(ImVec4(bb.Min.x, bb.Min.y, bb.Max.x, bb.Max.y));
+	ImGui::PushClipRect(bb.Min, bb.Max, true);
 
-	const ImGuiID id = window->GetID(unique_name);
-
-	ImGuiState& g = *GImGui;
 	ImGuiIO& io = ImGui::GetIO();
-	const ImGuiStyle& style = g.Style;
-
-	//ImGui::ItemSize(bb, style.FramePadding.y); // advances cursor. not needed here.
-	if (!ImGui::ItemAdd(bb, &id))
-		return; // outside of screen. or also behind something?
 
 	PortalRect screen_visualspace_portal(bb);
 	ImVec2d visualmousecoord = screen_visualspace_portal.proj_vout(g.IO.MousePos); // mouse coord in graph visualspace. 0,0 is top-left corner of the graph, 1,1 bottom-right.
@@ -157,7 +170,7 @@ void GraphWidget::DoGraph(const char* unique_name)
 	// calculate a coordinate system screen_sample_portal that converts from sample-space directly to screen-space (pixel-coordinates)
 
 	// TODO: i don't quite know yet why this works. is this inversion of the portal?
-	// TODO: make this double. bb hast to be ImVec2d in that case.
+	// TODO: make this double. bb has to be ImVec2d in that case.
 	PortalRect screen_visualspace_portal_(-1.0f/bb.GetSize()*bb.Min, -1.0f/bb.GetSize()*bb.Min + 1.0f/bb.GetSize());
 	PortalRect screen_sample_portal = graph_visual.portal.proj_out( graph_channel.portal ).proj_in(screen_visualspace_portal_);
 	PortalRect screen_value_portal = graph_visual.portal.proj_in(screen_visualspace_portal_);
@@ -179,7 +192,7 @@ void GraphWidget::DoGraph(const char* unique_name)
 
 	_render_legend(bb);
 
-	draw_list->PopClipRect();
+	ImGui::PopClipRect();
 }
 
 void GraphWidget::_render_minmax_background(const PortalRect& screen_value_portal, GraphVisual& graph_visual, const ImRect& canvas_bb)
@@ -334,18 +347,23 @@ void GraphWidget::_render_grid_verlegend(const PortalRect& screen_value_portal, 
 void GraphWidget::_render_legend(const ImRect& canvas_bb)
 {
 	// canvas_bb : screenspace, window contents
-	int text_h = ImGui::GetTextLineHeightWithSpacing();
+
+	// set distance between checkboxes and set size of the checkbox to be NOT HUGE!
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 4));
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+
+	// height without spacing between checkboxes
+	float checkbox_height = GImGui->FontSize + GImGui->Style.FramePadding.y*2;
+	float framepad = 4;
 
 	// save cursor pos so we can restore it later
 	ImVec2 old_cursor_pos = ImGui::GetCursorPos();
 
-	// TODO: how the f does this work? + 4 is for top padding, but we also have the bottom to take care of, yet everything is perfect with 4 instead of 8 here.
-	int h = text_h * graph_visuals.size() + 4; // checkbox height with builtin padding
-	int w = text_h * 10; // roughly how many characters wide. works only with square fonts
-	int x = canvas_bb.Min.x + 43;
-	int y = canvas_bb.Max.y - h - 20;
-
-	ImGui::SetCursorScreenPos(ImVec2(x,y));
+	// size and pos of the frame around legend box
+	float h = ((checkbox_height + GImGui->Style.ItemSpacing.y) * graph_visuals.size() - GImGui->Style.ItemSpacing.y + framepad * 2);
+	float w = (ImGui::GetTextLineHeight() * 10); // roughly how many characters wide. works only with square fonts
+	float x = canvas_bb.Min.x + 43;
+	float y = canvas_bb.Max.y - h - 20;
 
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 	// screenspace coordinates
@@ -359,10 +377,14 @@ void GraphWidget::_render_legend(const ImRect& canvas_bb)
 	draw_list->AddRectFilled(p_min, p_max, fill_col, rounding);
 	draw_list->AddRect(p_min, p_max, border_col, rounding);
 
-	x += 4; y += 4; // pad
+	// start legend text rendring a few pixels inside of the frame rectangle
+	x += framepad; y += framepad;
 
 	ImGui::SetCursorScreenPos(ImVec2(x,y));
 	ImGui::BeginGroup();
+
+	// piece of code from inside Checkbox implementation. padding from checkbox edge to the inner checkmark.
+	float pad = ImMax(1.0f, (float)(int)(checkbox_height / 6.0f));
 
 	for (int i = 0; i < graph_visuals.size(); i++) {
 
@@ -380,20 +402,22 @@ void GraphWidget::_render_legend(const ImRect& canvas_bb)
 		// draw little horizontal line (with current graph color) inside the checkbox if checkbox is not set.
 		if (!graph_visuals[i]->visible) {
 			ImVec2 cursor_pos = ImGui::GetCursorScreenPos();
-			float line_y = cursor_pos.y - 11;
-			float line_x = cursor_pos.x + 2;
-			draw_list->AddLine(ImVec2(line_x, line_y), ImVec2(line_x + 9, line_y), ImColor(graph_visuals[i]->line_color)); // ImColor(graph_visual.ver_grid_color));
+			// calc coordinates of the checkbox (now it's on the previous line)
+			float line_y = cursor_pos.y - (int)(checkbox_height / 2. + 0.5) - GImGui->Style.ItemSpacing.y;
+			float line_x = cursor_pos.x + pad;
+			float line_len = checkbox_height - pad * 2;
+			draw_list->AddLine(ImVec2(line_x, line_y), ImVec2(line_x + line_len, line_y), ImColor(graph_visuals[i]->line_color)); // ImColor(graph_visual.ver_grid_color));
 		}
 	}
 	ImGui::EndGroup();
 
+	ImGui::PopStyleVar(2);
 	// restore cursor pos
 	ImGui::SetCursorPos(old_cursor_pos);
 }
 
 void GraphWidget::_grid_timestr(double seconds, double step, char* outstr, int outstr_size)
 {
-
 	double s = fabs(seconds);
 	int days = int(floor(s / (60 * 60 * 24)));
 	int hours = int(floor(s / (60 * 60))) % 24;

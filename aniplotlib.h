@@ -187,7 +187,8 @@ struct GraphVisual {
 	// // zoom: visualcenterpos: coordinates on the graph window around which everything changes. usually the coordinates under the mouse. 0..1
 	void resize_by_ratio(const ImVec2d& center, const ImVec2d& ratio) { portal.resize_by_ratio(portal.proj_vin(center), ratio); }
 
-	// How should values be mapped to a box with origin 0,0 and size 1,1. 0,0 is top-left corner.
+	// How should values be mapped to a box with origin 0,0 and size 1,1. 0,0 is top-left corner. Used to set zoom
+	// and position, in other words configure how much of the data is currently visible through this GraphVisual.
 	// innerspace is a rect of values and time.
 	// innerspace ex: ((5.6V, 0s), (1.1V, 60s)) - this shows 1 minute worth of data from start of the recording,
 	//                bottom of the window starts from 1.1V and top of the window ends with 5.6V).
@@ -218,7 +219,7 @@ struct GraphWidget {
 	// Does NOT take ownership.
 	void add_graph(GraphVisual* graph_visual);
 	// size in pixels, with scrollbars (if scrollbars are turned on)
-	void DoGraph(const char* unique_name);
+	void DoGraph(const char* label, ImVec2 size=ImVec2(0,0));
 
 private:
 	void _render_minmax_background(const PortalRect& screen_value_portal, GraphVisual& graph_visual, const ImRect& canvas_bb);

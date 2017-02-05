@@ -1,4 +1,4 @@
-// Copyright (c) 2015, Elmo Trolla
+// Copyright (c) 2017, Elmo Trolla
 // LICENSE: https://opensource.org/licenses/ISC
 
 #include <cstdlib>
@@ -366,8 +366,6 @@ public:
 
 ImRect get_window_coords() {
 	return ImRect(ImGui::GetWindowPos(), ImGui::GetWindowPos()+ImGui::GetWindowSize());
-	//const ImRect bb(window->DC.CursorPos, window->DC.CursorPos+size);
-	//const ImRect bb(window->DC.CursorPos, window->DC.CursorPos+ImGui::GetContentRegionAvail());
 }
 
 
@@ -436,11 +434,14 @@ int main(int, char**)
 	// Setup ImGui binding
 	ImGui_ImplSdlGL3_Init(window);
 
-
 	// --------------------------------------------------------------------
 
 	//ImVec4 clear_color = ImColor(114, 144, 154);
 	ImVec4 clear_color = ImColor(128, 128, 128);
+
+	// This is necessary, or objects inside fullsize window are always a bit smaller than the window.
+	ImGui::GetStyle().DisplaySafeAreaPadding = ImVec2(0,0);
+
 	ImguiTextwrap textrend;
 
 	GraphWorld graph_world;
@@ -449,44 +450,6 @@ int main(int, char**)
 	graph_channel->name = "default";
 
 	UdpListener windows_udp_listener;
-
-#if 0
-
-	if (0) {
-		GraphChannel* graph_channel = graph_world.get_graph_channel(0, 0);
-
-		// TODO: 500 million samples crash on windows. 1.8GB memory gets allocated, then crash.
-		for (int i = 0; i < 500000; i++) {
-			float v = 0.9*sinf(i * 1000. / 60. / 3. * M_PI / 180.) +
-					0.5*sinf(i * 1000. / 60. / 3.333 * M_PI / 180.) +
-					0.3*sinf(i * 1000. / 60. / 31. * M_PI / 180.) +
-					sinf(i * 1000. / 60. / 321. * M_PI / 180.) +
-					sinf(i * 1000. / 60. / 12345. * M_PI / 180.) +
-					2.*sinf(i * 1000. / 60. / 567890. * M_PI / 180.) +
-					sinf(i * 1000. / 60. / 58890000. * M_PI / 180.);
-			graph_channel->append_sample(v);
-		}
-	}
-
-	if (0) {
-		//char* filename = "tek0005both channels.csv-ch1.samples-f32";
-		char* filename = "test.samples-f32";
-		//char* filename = "tek0005both channels.csv-ch1.samples-f32";
-		SDL_Log("opening file '%s'", filename);
-		MemFile f(filename);
-		if (f.buf) {
-			float* buf = (float*)f.buf;
-			SDL_Log("file size %i bytes. loading data to the channel object.", f.file_size);
-			for (int i = 0; i < f.file_size/4; i++) {
-				float v = buf[i]; // TODO: does compiler optimize this to the while-not-last-ptr method?
-				graph_channel.data_channel.append_minmaxavg(v, v, v);
-			}
-			SDL_Log("import done");
-		} else {
-			SDL_Log("file open failed");
-		}
-	}
-#endif
 
 	bool window_hidden = false;
 
@@ -511,12 +474,9 @@ int main(int, char**)
 				if (event.key.keysym.sym == SDLK_ESCAPE) done = true;
 			}
 		}
-		ImGui_ImplSdlGL3_NewFrame();
+		ImGui_ImplSdlGL3_NewFrame(window);
 
 		ImGuiIO &io = ImGui::GetIO();
-
-		//float v = sin(milliseconds / 3. * M_PI / 180.);
-		//graph_channel.data_channel.append_minmaxavg(v, v, v);
 
 		windows_udp_listener.tick(graph_world);
 
@@ -525,7 +485,7 @@ int main(int, char**)
 			// Create the global background window (will never raise to front) and render fps
 			// to the always-on-top imgui OverlayDrawList.
 
-			{
+			if (0) {
 				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
 
@@ -533,6 +493,8 @@ int main(int, char**)
 				// positioning was wrong. So we still need to create the background window although
 				// it's unused.
 				ImGui::SetNextWindowSize(io.DisplaySize, ImGuiSetCond_Always);
+				//ImGui::Begin("Robot", NULL, ImVec2(0.f, 0.f), 0.f, 0);
+				// fourth param is the window background alpha. if 0, no background is drawn.
 				ImGui::Begin("Robot", NULL, ImVec2(0.f, 0.f), 0.f,
 				             ImGuiWindowFlags_NoTitleBar |
 				             ImGuiWindowFlags_NoMove |
@@ -563,6 +525,29 @@ int main(int, char**)
 			// scan through all graph_world.streams and render what are active
 			//
 
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
+			ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, 0);
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
+			ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 0);
+
+			float window_w = ImGui::GetIO().DisplaySize.x;
+			float window_h = ImGui::GetIO().DisplaySize.y;
+			ImGui::SetNextWindowContentSize(ImVec2(window_w, window_h));
+			ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiSetCond_Always);
+
+			ImGui::Begin("Robota", NULL, ImVec2(0.f, 0.f), 0.f,
+			             ImGuiWindowFlags_NoTitleBar |
+			             ImGuiWindowFlags_NoMove |
+			             ImGuiWindowFlags_NoResize |
+			             ImGuiWindowFlags_NoCollapse |
+			             ImGuiWindowFlags_NoScrollbar |
+			             ImGuiWindowFlags_NoSavedSettings |
+			             ImGuiWindowFlags_NoScrollbar);
+
 			for (int i = 0; i < 256; i++) {
 
 				if (!graph_world.streams[i].initialized)
@@ -580,55 +565,36 @@ int main(int, char**)
 				int graph_w = int(graph_x2 + 0.5) - int(graph_x1 + 0.5);
 				int graph_h = int(graph_y2 + 0.5) - int(graph_y1 + 0.5);
 
-				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-				// TODO: check if still draws background?
-				//ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0);
-
-				ImGui::SetNextWindowSize(ImVec2(graph_w, graph_h), ImGuiSetCond_Always);
-				ImGui::SetNextWindowContentSize(ImVec2(graph_w, graph_h));
-				ImGui::SetNextWindowPos(
-						ImVec2(int(graph_x1 + 0.5f), int(graph_y1 + 0.5f)),
-						ImGuiSetCond_Always);
+				ImGui::SetCursorPos(ImVec2((int)(graph_x1 + 0.5f), (int)(graph_y1 + 0.5f)));
 
 				char temp_window_name[255];
 				ImFormatString(temp_window_name, sizeof(temp_window_name), "Robota-%i", i);
 
-				ImGui::Begin(temp_window_name, NULL, ImVec2(0.f, 0.f), 0.f,
-				             ImGuiWindowFlags_NoTitleBar |
-				             ImGuiWindowFlags_NoMove |
-				             ImGuiWindowFlags_NoResize |
-				             ImGuiWindowFlags_NoCollapse |
-				             ImGuiWindowFlags_NoSavedSettings |
-				             ImGuiWindowFlags_NoScrollbar);
-				ImGui::SetCursorPos(ImVec2(0, 0));
-
-				graph_world.streams[i].graph_widget->DoGraph(temp_window_name);
-				ImGui::End();
-
-				ImGui::PopStyleVar(2);
+				graph_world.streams[i].graph_widget->DoGraph(temp_window_name, ImVec2(graph_w, graph_h));
 			}
+
+			//
+			// Render fps to the always-on-top imgui OverlayDrawList. This has to the last thing in this
+			// window before ImGui::End, or aniplot crashes after some time.
+			//
+
+			if (!textrend.font)
+				textrend.init(ImGui::GetIO().Fonts->Fonts[0], &GImGui->OverlayDrawList);
+
+			char txt[50];
+			ImFormatString(txt, sizeof(txt), "fps: %.1f (%.3f ms)", ImGui::GetIO().Framerate,
+			               1000.0f / ImGui::GetIO().Framerate);
+			ImRect windim = get_window_coords();
+			textrend.set_bgcolor(ImColor(80, 80, 80, 100));
+			textrend.set_fgcolor(ImColor(255, 255, 255, 100));
+			textrend.drawtr(txt, windim.Max.x, windim.Min.y);
+
+			ImGui::End();
+			ImGui::PopStyleVar(7);
 		}
 
 		// testing ground
 		if (0 && !window_hidden) {
-			ImGui::Begin("deb", NULL);
-
-			ImFont *f = ImGui::GetWindowFont();
-
-			float x = floor(1.);
-			float y = floor(1.);
-
-			const char* txt = "AB";
-			ImVec2 str_size = f->CalcTextSizeA(f->FontSize, FLT_MAX, 0, txt, NULL, NULL);
-
-			float up_left_x = x;
-			float up_left_y = y;
-			float down_right_x = x + str_size.x + 1;
-			float down_right_y = y + f->FontSize;
-			// TODO: ascent + descent == size?
-
-
 			// 1.0 ,1.0  2.0 ,2.0  - this draws 1x1 square one pixel away from the corner
 			// 1.5 ,1.5  2.0 ,2.0  - this draws 1x1 square one pixel away from the corner
 			// 1.51,1.51 2.0 ,2.0  - this draws nothing
@@ -644,27 +610,9 @@ int main(int, char**)
 			//        (0.5 - 1.5] - rendering starts from second pixel. smaller-equal than 0.5 is first pixel.
 			//ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(0.51, 0.51), ImVec2(2.50, 2.50), ImColor(128,128,128,255));
 
-			ImGui::GetWindowDrawList()->AddRectFilled(
-				ImVec2(up_left_x, up_left_y),
-				ImVec2(down_right_x, down_right_y),
-				ImColor(128, 128, 128, 255));
-
 			// text : pixel coordinates start from pixel corner, not from pixel center.
 			// [0., 1.) - render starts inside first pixel. 1. is start of the second pixel.
 			//ImGui::GetWindowDrawList()->AddText(ImGui::GetWindowFont(), ImGui::GetWindowFont()->FontSize, ImVec2(1., 1.), ImColor(255,255,255,255), txt, NULL, 0, NULL);
-
-			ImGui::GetWindowDrawList()->AddText(
-				ImGui::GetWindowFont(),
-				ImGui::GetWindowFont()->FontSize,
-				ImVec2(x, y),
-				ImColor(255, 255, 255, 255),
-				txt, NULL, 0, NULL);
-
-			// textile saab floor teha ok.
-			// aga rectile? round(x-0.5)
-			// tekstil on pixel 1, x coord [1..2)
-
-			ImGui::End();
 		}
 
 		//static bool show_test_window;
