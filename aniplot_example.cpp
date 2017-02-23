@@ -3,6 +3,7 @@
 
 //#include <cstdlib>
 //#include <iostream>
+#include <memory> // required for linux std::shared_ptr
 #include <math.h>
 
 #include <GL/gl3w.h>
