@@ -7,7 +7,13 @@ Hopes to become a fast realtime and non-realtime telemetry graphs browser.
 MacOS (tested on Sierra):
 ```
 brew install sdl2
-./build64-macosx.sh
+./build64-linux-and-macos.sh
+
+```
+Linux (tested on Debian stretch):
+```
+apt-get install libsdl2-dev
+./build64-linux-and-macos.sh
 ```
 Windows:
 ```
@@ -15,11 +21,21 @@ build64-vc12.bat
 or
 build64-vc14.bat
 ```
-Linux:
+
+# build example
+
+MacOS (tested on Sierra):
 ```
-apt-get install libsdl2-dev ?
-./build64-linux.sh
+brew install sdl2
+./build64-linux-and-macos.sh example
+
 ```
+Linux (tested on Debian stretch):
+```
+apt-get install libsdl2-dev
+./build64-linux-and-macos.sh example
+```
+
 
 # credits/dependencies
 
