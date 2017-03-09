@@ -52,3 +52,6 @@ namespace ImGui
 }
 */
 
+
+// fdkz: use 32-bit indices for vertex buffers. corruption/crash/burn otherwise.
+#define ImDrawIdx unsigned int
