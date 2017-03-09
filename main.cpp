@@ -378,7 +378,7 @@ int main(int, char**)
 	#ifdef __WIN32__
 		// without this, windows just scales the window up if using a hidgpi monitor. horrible.
 		// with this, image is pixel-perfect, but text is tiny. sorry..
-		SetProcessDPIAware();
+		//SetProcessDPIAware();
 	#endif
 
 	SDL_VERSION(&compiled);
