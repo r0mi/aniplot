@@ -375,6 +375,12 @@ int main(int, char**)
 	SDL_version compiled;
 	SDL_version linked;
 
+	#ifdef __WIN32__
+		// without this, windows just scales the window up if using a hidgpi monitor. horrible.
+		// with this, image is pixel-perfect, but text is tiny. sorry..
+		SetProcessDPIAware();
+	#endif
+
 	SDL_VERSION(&compiled);
 	SDL_GetVersion(&linked);
 
@@ -405,7 +411,7 @@ int main(int, char**)
 			SDL_WINDOWPOS_UNDEFINED,
 			INITIAL_SCREEN_WIDTH,
 			INITIAL_SCREEN_HEIGHT,
-			SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+			SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 	if (window == NULL) {
 		SDL_Log("SDL_CreateWindow error: %s\n", SDL_GetError());
 		return -1;
