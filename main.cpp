@@ -378,7 +378,7 @@ int main(int, char**)
 	#ifdef __WIN32__
 		// without this, windows just scales the window up if using a hidgpi monitor. horrible.
 		// with this, image is pixel-perfect, but text is tiny. sorry..
-		//SetProcessDPIAware();
+		SetProcessDPIAware();
 	#endif
 
 	SDL_VERSION(&compiled);
@@ -543,6 +543,7 @@ int main(int, char**)
 			float window_w = ImGui::GetIO().DisplaySize.x;
 			float window_h = ImGui::GetIO().DisplaySize.y;
 			ImGui::SetNextWindowContentSize(ImVec2(window_w, window_h));
+			ImGui::SetNextWindowSize(ImVec2(window_w, window_h));
 			ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiSetCond_Always);
 
 			ImGui::Begin("Robota", NULL, ImVec2(0.f, 0.f), 0.f,
