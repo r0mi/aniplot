@@ -135,7 +135,7 @@ void MipBuf_t<T>::append_minmaxavg(T minval, T maxval, T avg)
 		MipBufEntry<T>* e1 = m_buf.get(-2);
 		MipBufEntry<T>* e2 = m_buf.get(-1);
 		// TODO: avg1 + avg2 overflow if unsigned char?
-		m_child->append_minmaxavg(MIP_MIN(e1->minval, e2->minval), MIP_MAX(e1->maxval, e2->maxval), (e1->avg + e2->avg) / 2.);
+		m_child->append_minmaxavg(MIP_MIN(e1->minval, e2->minval), MIP_MAX(e1->maxval, e2->maxval), (e1->avg + e2->avg) / 2.f);
 	}
 }
 
@@ -214,8 +214,8 @@ int MipBuf_t<T>::get_buf(
 	// Note that pixels and samples are quite different conceptually. Samples are arealess points and pixels are squares.
 	//float samples_per_pixel = _samples_per_window / resolution;
 	//float pixels_per_sample = resolution / _samples_per_window;
-	float samples_per_pixel = (end_sample - start_sample) / resolution;
-	float pixels_per_sample = resolution / (end_sample - start_sample);
+	float samples_per_pixel = (float)((end_sample - start_sample) / resolution);
+	float pixels_per_sample = (float)(resolution / (end_sample - start_sample));
 
 	if (samples_per_pixel >= 2. && m_child && (end_sample - start_sample) >= 5.) {
 		// Too much resolution. Get child buf.
@@ -232,10 +232,10 @@ int MipBuf_t<T>::get_buf(
 
 	} else {
 
-		int i_start = floor(start_sample);
-		int i_end   = ceil(end_sample); // index of the last entry to be drawn
+		int i_start = (int)floor(start_sample);
+		int i_end   = (int)ceil(end_sample); // index of the last entry to be drawn
 
-		i_start = MIP_MAX(i_start, 0.);
+		i_start = MIP_MAX(i_start, 0);
 		i_end   = MIP_MIN(i_end, m_buf.size() - 1);
 
 		// convert sample coords to top-level MipBuf space.

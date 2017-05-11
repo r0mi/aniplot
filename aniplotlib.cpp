@@ -117,10 +117,10 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 
 		// if mouse wheel moves, zoom height if ctrl or right mousebutton is down. else zoom width.
 		if (io.MouseWheel < 0) {
-			zoom = (io.KeyCtrl || g.IO.MouseDown[1]) ? ImVec2(1., 1.3) : ImVec2(1.3, 1.);
+			zoom = (io.KeyCtrl || g.IO.MouseDown[1]) ? ImVec2(1.0f, 1.3f) : ImVec2(1.3f, 1.0f);
 		}
 		if (io.MouseWheel > 0) {
-			zoom = (io.KeyCtrl || g.IO.MouseDown[1]) ? ImVec2(1., 1./1.3) : ImVec2(1./1.3, 1.);
+			zoom = (io.KeyCtrl || g.IO.MouseDown[1]) ? ImVec2(1.0f, 1.0f/1.3f) : ImVec2(1.0f/1.3f, 1.0f);
 		}
 		if (zoom.x || zoom.y) {
 			for (int i = 0; i < graph_visuals.size(); i++) {
@@ -151,14 +151,14 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 			graph_visual.anchored = false;
 	}
 
-	float last_sample_in_visualspace = graph_visual.sample_to_visualspace(ImVec2(graph_channel.data_channel.size(), 0.)).x;
+	double last_sample_in_visualspace = graph_visual.sample_to_visualspace(ImVec2d(graph_channel.data_channel.size(), 0.)).x;
 	if (last_sample_in_visualspace < 1)
 		graph_visual.anchored = true;
 
 	if (graph_visual.anchored) {
 		// move visualspace so that its right edge is on the last sample
-		float last_sample_in_valuespace = graph_channel.sample_to_valuespace(ImVec2(graph_channel.data_channel.size(), 0.)).x;
-		float portal_width = graph_visual.portal.w();
+		double last_sample_in_valuespace = graph_channel.sample_to_valuespace(ImVec2d(graph_channel.data_channel.size(), 0.)).x;
+		double portal_width = graph_visual.portal.w();
 		for (int i = 0; i < graph_visuals.size(); i++) {
 			graph_visuals[i]->portal.min.x = last_sample_in_valuespace - portal_width;
 			graph_visuals[i]->portal.max.x = last_sample_in_valuespace;
@@ -205,14 +205,14 @@ void GraphWidget::_render_minmax_background(const PortalRect& screen_value_porta
 
 	double y1 = screen_value_portal.proj_vout(ImVec2(0., graph_channel.value_min)).y;
 	double y2 = screen_value_portal.proj_vout(ImVec2(0., graph_channel.value_max)).y;
-	if (y1 > y2) { float y = y1; y1 = y2; y2 = y; }
+	if (y1 > y2) { double y = y1; y1 = y2; y2 = y; }
 
 	if (graph_channel.value_min == graph_channel.value_max) {
 		draw_list->AddRectFilled( ImVec2(canvas_bb.Min.x, canvas_bb.Min.y), ImVec2(canvas_bb.Max.x, canvas_bb.Max.y), ImColor(graph_visual.bg_color) );
 	} else {
-		draw_list->AddRectFilled( ImVec2(canvas_bb.Min.x, canvas_bb.Min.y), ImVec2(canvas_bb.Max.x, y1), ImColor(graph_visual.minmax_bgcolor) );
-		draw_list->AddRectFilled( ImVec2(canvas_bb.Min.x, y2), ImVec2(canvas_bb.Max.x, y1), ImColor(graph_visual.bg_color) );
-		draw_list->AddRectFilled( ImVec2(canvas_bb.Min.x, y2), ImVec2(canvas_bb.Max.x, canvas_bb.Max.y), ImColor(graph_visual.minmax_bgcolor) );
+		draw_list->AddRectFilled( ImVec2(canvas_bb.Min.x, canvas_bb.Min.y), ImVec2(canvas_bb.Max.x, (float)y1), ImColor(graph_visual.minmax_bgcolor) );
+		draw_list->AddRectFilled( ImVec2(canvas_bb.Min.x, (float)y2), ImVec2(canvas_bb.Max.x, (float)y1), ImColor(graph_visual.bg_color) );
+		draw_list->AddRectFilled( ImVec2(canvas_bb.Min.x, (float)y2), ImVec2(canvas_bb.Max.x, canvas_bb.Max.y), ImColor(graph_visual.minmax_bgcolor) );
 	}
 }
 
@@ -235,7 +235,7 @@ int GraphWidget::_calculate_gridlines(double min_val, double max_val, double siz
 	*out_val_begin = volt_begin;
 	*out_val_end = volt_end;
 	*out_val_step = volt_step;
-	return round((volt_end - volt_begin) / volt_step) + 1;
+	return (int)round((volt_end - volt_begin) / volt_step) + 1;
 }
 
 void GraphWidget::_render_grid_horlines(const PortalRect& screen_value_portal, GraphVisual& graph_visual, const ImRect& canvas_bb)
@@ -249,15 +249,15 @@ void GraphWidget::_render_grid_horlines(const PortalRect& screen_value_portal, G
 	if (volt_step == 0 || volt_end <= volt_begin)
 		return;
 
-	double pixel_y_begin   = screen_value_portal.proj_vout(ImVec2(0., volt_begin)).y;
-	double pixels_per_volt = screen_value_portal.proj_vout(ImVec2(0., 1.)).y - screen_value_portal.proj_vout(ImVec2(0., 0.)).y;
+	double pixel_y_begin   = screen_value_portal.proj_vout(ImVec2d(0., volt_begin)).y;
+	double pixels_per_volt = screen_value_portal.proj_vout(ImVec2d(0., 1.)).y - screen_value_portal.proj_vout(ImVec2d(0., 0.)).y;
 	double pixel_y_step    = pixels_per_volt * volt_step;
 	//SDL_Log("num_gridlines %d pixels_per_volt %.5f pixel_y_begin %.5f pixel_y_step %.5f\n", num_gridlines, pixels_per_volt, pixel_y_begin, pixel_y_step);
 
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 	double y = pixel_y_begin;
 	for (int i = 0; i < num_gridlines; i++) {
-		draw_list->AddLine(ImVec2(canvas_bb.Min.x, y), ImVec2(canvas_bb.Max.x, y), ImColor(graph_visual.hor_grid_color));
+		draw_list->AddLine(ImVec2(canvas_bb.Min.x, (float)y), ImVec2(canvas_bb.Max.x, (float)y), ImColor(graph_visual.hor_grid_color));
 		y += pixel_y_step;
 	}
 }
@@ -272,8 +272,8 @@ void GraphWidget::_render_grid_horlegend(const PortalRect& screen_value_portal, 
 	if (volt_step == 0 || volt_end <= volt_begin)
 		return;
 
-	double pixel_y_begin   = screen_value_portal.proj_vout(ImVec2(0., volt_begin)).y;
-	double pixels_per_volt = screen_value_portal.proj_vout(ImVec2(0., 1.)).y - screen_value_portal.proj_vout(ImVec2(0., 0.)).y;
+	double pixel_y_begin   = screen_value_portal.proj_vout(ImVec2d(0., volt_begin)).y;
+	double pixels_per_volt = screen_value_portal.proj_vout(ImVec2d(0., 1.)).y - screen_value_portal.proj_vout(ImVec2d(0., 0.)).y;
 	double pixel_y_step    = pixels_per_volt * volt_step;
 
 	this->m_textrend->set_fgcolor(ImColor(graph_visual.hor_grid_text_color));
@@ -285,7 +285,7 @@ void GraphWidget::_render_grid_horlegend(const PortalRect& screen_value_portal, 
 
 	for (int i = 0; i < num_gridlines; i++) {
 		ImFormatString(txt, sizeof(txt), "%.2f", value);
-		this->m_textrend->drawml(txt, canvas_bb.Min.x, y);
+		this->m_textrend->drawml(txt, canvas_bb.Min.x, (float)y);
 		y += pixel_y_step;
 		value += volt_step;
 	}
@@ -304,14 +304,14 @@ void GraphWidget::_render_grid_verlines(const PortalRect& screen_value_portal, G
 	if (time_step == 0 || time_end <= time_begin)
 		return;
 
-	double pixel_x_begin   = screen_value_portal.proj_vout(ImVec2(time_begin, 0.)).x;
-	double pixels_per_time = screen_value_portal.proj_vout(ImVec2(1., 0.)).x - screen_value_portal.proj_vout(ImVec2(0., 0.)).x;
+	double pixel_x_begin   = screen_value_portal.proj_vout(ImVec2d(time_begin, 0.)).x;
+	double pixels_per_time = screen_value_portal.proj_vout(ImVec2d(1., 0.)).x - screen_value_portal.proj_vout(ImVec2d(0., 0.)).x;
 	double pixel_x_step    = pixels_per_time * time_step;
 
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 	double x = pixel_x_begin;
 	for (int i = 0; i < num_gridlines; i++) {
-		draw_list->AddLine(ImVec2(x, canvas_bb.Min.y), ImVec2(x, canvas_bb.Max.y), ImColor(graph_visual.ver_grid_color));
+		draw_list->AddLine(ImVec2((float)x, canvas_bb.Min.y), ImVec2((float)x, canvas_bb.Max.y), ImColor(graph_visual.ver_grid_color));
 		x += pixel_x_step;
 	}
 }
@@ -326,8 +326,8 @@ void GraphWidget::_render_grid_verlegend(const PortalRect& screen_value_portal, 
 	if (time_step == 0 || time_end <= time_begin)
 		return;
 
-	double pixel_x_begin   = screen_value_portal.proj_vout(ImVec2(time_begin, 0.)).x;
-	double pixels_per_time = screen_value_portal.proj_vout(ImVec2(1., 0.)).x - screen_value_portal.proj_vout(ImVec2(0., 0.)).x;
+	double pixel_x_begin   = screen_value_portal.proj_vout(ImVec2d(time_begin, 0.)).x;
+	double pixels_per_time = screen_value_portal.proj_vout(ImVec2d(1., 0.)).x - screen_value_portal.proj_vout(ImVec2d(0., 0.)).x;
 	double pixel_x_step    = pixels_per_time * time_step;
 
 	this->m_textrend->set_fgcolor(ImColor(graph_visual.hor_grid_text_color));
@@ -338,7 +338,7 @@ void GraphWidget::_render_grid_verlegend(const PortalRect& screen_value_portal, 
 	for (int i = 0; i < num_gridlines; i++) {
 		char txt[20];
 		_grid_timestr(value, time_step, txt, sizeof(txt));
-		this->m_textrend->drawbm(txt, x, canvas_bb.Max.y);
+		this->m_textrend->drawbm(txt, (float)x, canvas_bb.Max.y);
 		x += pixel_x_step;
 		value += time_step;
 	}
@@ -372,7 +372,7 @@ void GraphWidget::_render_legend(const ImRect& canvas_bb)
 
 	ImColor fill_col = ImColor(0, 0, 0, 128);
 	ImColor border_col = ImColor(170, 170, 170, 128);
-	int rounding = 0;
+	float rounding = 0;
 
 	draw_list->AddRectFilled(p_min, p_max, fill_col, rounding);
 	draw_list->AddRect(p_min, p_max, border_col, rounding);
@@ -422,7 +422,7 @@ void GraphWidget::_grid_timestr(double seconds, double step, char* outstr, int o
 	int days = int(floor(s / (60 * 60 * 24)));
 	int hours = int(floor(s / (60 * 60))) % 24;
 	int minutes = int(floor(s / 60)) % 60;
-	float seconds2 = int(s) % 60;
+	float seconds2 = (float)fmod(s, 60);
 
 	if (s < 60) {
 		ImFormatString(outstr, outstr_size, "%.2fs", s);
@@ -471,12 +471,12 @@ void GraphWidget::_draw_graphlines(const PortalRect& screen_sample_portal, Graph
 		return;
 
 	// top-level samples per returned mip-level index.
-	float dsample = (out_end_sample - out_start_sample) / (out_end_index - out_start_index);
-	float dpixel = (out_end_pixel - out_start_pixel) / (out_end_index - out_start_index);
+	float dsample = (float)((out_end_sample - out_start_sample) / (out_end_index - out_start_index));
+	float dpixel = (float)((out_end_pixel - out_start_pixel) / (out_end_index - out_start_index));
 	// top-level samples per pixel
-	float samples_per_pixel = (samplespace_x2 - samplespace_x1) / canvas_bb.GetWidth();
-	float pixelx_start = (out_start_sample - screen_sample_portal.min.x) / (screen_sample_portal.max.x - screen_sample_portal.min.x);
-	float _screen_sample_portal_height = 1. / (screen_sample_portal.max.y - screen_sample_portal.min.y);
+	float samples_per_pixel = (float)((samplespace_x2 - samplespace_x1) / canvas_bb.GetWidth());
+	float pixelx_start = (float)((out_start_sample - screen_sample_portal.min.x) / (screen_sample_portal.max.x - screen_sample_portal.min.x));
+	float _screen_sample_portal_height = (float)(1. / (screen_sample_portal.max.y - screen_sample_portal.min.y));
 
 	//
 	// Step through current mip-level indices by pixels_per_index pixels, starting from out_start_pixel.
