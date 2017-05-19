@@ -645,13 +645,13 @@ int main(int, char**)
 			// test if 10 last swaps were instantaneous and conclude that on macos the aniplot window is
 			// currently occluded and disable all rendering.
 
-			// At the moment, as soon as the aniplot window is occluded by a window, cpu usage raises to
+			// Without this, as soon as the aniplot window is occluded by a window, cpu usage raises to
 			// 100% on macos because why not. SDL_GL_SwapWindow returns immediately. Also something to do
 			// with the App Nap feature.
 			//
 			// If we'd care to be "responsible" here, we'd use the new windowDidChangeOcclusionState API,
 			// but to get that notification from the objective c runtime requires a lot of swearing and
-			// sacrificing out whole "build" system. yeah, not gonna consider it. The bad side-effect of
+			// sacrificing our whole "build" system. yeah, not gonna consider it. The bad side-effect of
 			// this is that with vsync turned off, nothing gets rendered at all. Let's wait until SDL2
 			// add support for the necessary feature.. glfw seems to have it, but is too big.
 
