@@ -10,7 +10,7 @@ if [[ "$1" == "example" ]]; then
 	MAIN_SRC=aniplot_example.cpp
 	BIN=aniplot_example
 else
-	MAIN_SRC=main.cpp
+	MAIN_SRC=aniplot.cpp
 	BIN=aniplot
 fi
 
