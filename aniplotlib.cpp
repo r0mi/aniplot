@@ -69,7 +69,7 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 	// this is almost verbatim from ImGui::RenderFrame, but because we render our own background and only want
 	// the border, we copied the border rendering parts here.
 	if (window->Flags & ImGuiWindowFlags_ShowBorders) {
-		window->DrawList->AddRect(frame_bb.Min+ImVec2(1,1), frame_bb.Max+ImVec2(1,1), ImGui::GetColorU32(ImGuiCol_BorderShadow), style.FrameRounding);
+		window->DrawList->AddRect(frame_bb.Min + ImVec2(1, 1), frame_bb.Max + ImVec2(1, 1), ImGui::GetColorU32(ImGuiCol_BorderShadow), style.FrameRounding);
 		window->DrawList->AddRect(frame_bb.Min, frame_bb.Max, ImGui::GetColorU32(ImGuiCol_Border), style.FrameRounding);
 	}
 
@@ -481,24 +481,37 @@ void GraphWidget::_draw_graphlines(const PortalRect& screen_sample_portal, Graph
 	float samples_per_pixel = (float)((samplespace_x2 - samplespace_x1) / canvas_bb.GetWidth());
 	float pixelx_start = (float)((out_start_sample - screen_sample_portal.min.x) / (screen_sample_portal.max.x - screen_sample_portal.min.x));
 	float _screen_sample_portal_height = (float)(1. / (screen_sample_portal.max.y - screen_sample_portal.min.y));
+	float portal_min_y = (float)screen_sample_portal.min.y;
 
 	//
 	// Step through current mip-level indices by pixels_per_index pixels, starting from out_start_pixel.
 	//
 
+	// TODO: find out how to disable antialising for AddLine
+
 	//ImVec2d p0, p1;
-	ImColor linecolor(0,0,0,0);
 	//int c;
 
 	// render minmax background line if we don't use the topmost mip level.
 	if (mipbuf != &graph_channel.data_channel) {
-		linecolor = graph_visual.line_color_minmax;
+		ImColor linecolor(graph_visual.line_color);
+		linecolor.Value.w = graph_visual.line_color_minmax.w;
+		ImU32 linecolor_fast = linecolor;
+
+		int numlines = out_end_index - out_start_index + 1;
+		// uncomment PrimReserve here and PrimRect in the inner loop and comment out AddLine to use 20% faster average-value-background rendering
+		//draw_list->PrimReserve(6 * numlines, 4 * numlines);
+
 		//c = 0;
 		float x = pixelx_start;
 		for (int i = out_start_index; i <= out_end_index; i++) {
-			float y1 = (mipbuf->get(i)->minval - (float)screen_sample_portal.min.y) * _screen_sample_portal_height;
-			float y2 = (mipbuf->get(i)->maxval - (float)screen_sample_portal.min.y) * _screen_sample_portal_height;
-			draw_list->AddLine(ImVec2(x, y1), ImVec2(x, y2), linecolor);
+			float y1 = (mipbuf->get(i)->minval - portal_min_y) * _screen_sample_portal_height;
+			float y2 = (mipbuf->get(i)->maxval - portal_min_y) * _screen_sample_portal_height;
+
+			draw_list->AddLine(ImVec2(x, y1), ImVec2(x, y2), linecolor_fast);
+			// TODO: fix pixel positions! should be x-0.5, x+0.5? same for y?
+			//draw_list->PrimRect(ImVec2(x, y1), ImVec2(x+1, y2), linecolor_fast);
+
 			x += dpixel;
 
 			// slower but shorter method:
@@ -509,18 +522,20 @@ void GraphWidget::_draw_graphlines(const PortalRect& screen_sample_portal, Graph
 		}
 	}
 
-	linecolor = graph_visual.line_color;
+	ImColor linecolor(graph_visual.line_color);
+	ImU32 linecolor_fast = linecolor;
+
 	//ImVec2 p0, p1;
 	//p0 = screen_sample_portal.proj_vout( ImVec2d(out_start_sample, mipbuf->get(out_start_index)->avg) );
 	//c = 1;
 	float x1, x2, y1, y2;
 	x1 = x2 = pixelx_start;
-	y1 = (mipbuf->get(out_start_index)->avg - (float)screen_sample_portal.min.y) * _screen_sample_portal_height;
+	y1 = (mipbuf->get(out_start_index)->avg - portal_min_y) * _screen_sample_portal_height;
 
 	for (int i = out_start_index + 1; i <= out_end_index; i++) {
-		y2 = (mipbuf->get(i)->avg - (float)screen_sample_portal.min.y) * _screen_sample_portal_height;
+		y2 = (mipbuf->get(i)->avg - portal_min_y) * _screen_sample_portal_height;
 		x2 += dpixel;
-		draw_list->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), linecolor, graph_visual.line_width);
+		draw_list->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), linecolor_fast, graph_visual.line_width);
 		x1 = x2; y1 = y2;
 
 		//p1 = screen_sample_portal.proj_vout( ImVec2d(out_start_sample + dsample * c, mipbuf->get(i)->avg) );

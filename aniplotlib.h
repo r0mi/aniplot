@@ -134,19 +134,19 @@ struct GraphChannel {
 };
 
 // Contains info about how to draw the data (color, linewidth, background color between min-max values..)
-// There can be many GraphVisual objects per GraphChannel, so one GraphChannel can be drawn to many places with many different ways.
+// There can be many GraphVisual objects per GraphChannel, so one GraphChannel can be drawn to many places in many different ways.
 struct GraphVisual {
 	GraphVisual(GraphChannel* _graph_channel, uint32_t flags=0) {
 		IM_ASSERT(_graph_channel);
 		graph_channel         = _graph_channel;
 		line_color            = ImColor(200, 200, 200);
-		line_color_minmax     = ImColor(200, 150, 150, 150);
-		minmax_bgcolor        = ImColor(20, 20, 20);
+		line_color_minmax     = ImColor(200, 150, 150, 100); // TODO: only alpha is used
+		minmax_bgcolor        = ImColor(27, 27, 27);
 		bg_color              = ImColor(0, 0, 0);
-		hor_grid_color        = ImVec4(0.15f, 0.15f, 0.15f, 1.0f);
+		hor_grid_color        = ImVec4(0.19f, 0.19f, 0.19f, 1.0f);
 		hor_grid_text_color   = ImVec4(1.0f, 1.0f, 1.0f, 0.8f);
 		hor_grid_text_bgcolor = ImVec4(0.2f, 0.2f, 0.2f, 0.8f);
-		ver_grid_color        = ImVec4(0.15f, 0.15f, 0.15f, 1.0f);
+		ver_grid_color        = ImVec4(0.19f, 0.19f, 0.19f, 1.0f);
 		ver_grid_text_color   = ImVec4(1.0f, 1.0f, 1.0f, 0.8f);
 		ver_grid_text_bgcolor = ImVec4(0.2f, 0.2f, 0.2f, 0.8f);
 		grid_legend_color     = ImVec4(0.65f, 0.15f, 0.15f, 1.0f);
