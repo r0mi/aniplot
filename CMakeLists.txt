@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.3)
 project(aniplot)
 
+set( D          ${PROJECT_SOURCE_DIR} )
+set( DISTDIR    ${D}/dist )
 
 #http://www.cmake.org/cmake/help/v3.0/module/FindOpenGL.html
 find_package(OpenGL REQUIRED)
@@ -50,11 +52,14 @@ if (MACOS)
 
 elseif (WIN32)
 
-	link_directories("lib/SDL2-devel-2.0.4-VC/lib/x64/") # damnit this has to be above add_executable or SDL2.lib is not found
-	add_executable(${PROJECT_NAME} "aniplot.cpp")
-	target_include_directories(${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIR} "lib/imgui" "lib/imgui/examples/sdl_opengl3_example/" "lib/gl3w" "lib/SDL2-devel-2.0.4-VC/include") # ${CMAKE_SOURCE_DIR}
-	target_sources(${PROJECT_NAME} PRIVATE ${SOURCE_FILES})
-	target_link_libraries(${PROJECT_NAME} ${OPENGL_gl_LIBRARY} "SDL2" "SDL2main" "ws2_32")
+	link_directories           ("lib/SDL2-devel-2.0.4-VC/lib/x64/") # damnit this has to be above add_library or SDL2.lib is not found
+	add_executable             (${PROJECT_NAME} "aniplot.cpp")
+	target_include_directories (${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIR} "lib/imgui" "lib/imgui/examples/sdl_opengl3_example/" "lib/gl3w" "lib/SDL2-devel-2.0.4-VC/include")
+	target_sources             (${PROJECT_NAME} PRIVATE ${SOURCE_FILES})
+	target_link_libraries      (${PROJECT_NAME} ${OPENGL_gl_LIBRARY} "SDL2" "SDL2main" "ws2_32")
+
+	set_target_properties      (${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${DISTDIR})
+	set_target_properties      (${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${DISTDIR})
 
 elseif (UNIX)
 	message(WARNING "todo")
