@@ -52,7 +52,8 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 	if (size.x <= 0.0f)
 		size.x =  ImGui::GetContentRegionAvail().x; // ImGui::CalcItemWidth() + 200;
 	if (size.y <= 0.0f)
-		size.y = 20 + (style.FramePadding.y * 2);
+		size.y = ImGui::GetContentRegionAvail().y;
+	//size.y = 20 + (style.FramePadding.y * 2);
 
 	const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(size.x, size.y));
 	const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
@@ -113,14 +114,16 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 
 	if (hovered) {
 		ImGuiIO& io = ImGui::GetIO();
-		ImVec2 zoom(0.,0.);
+		ImVec2 zoom(0., 0.);
 
 		// if mouse wheel moves, zoom height if ctrl or right mousebutton is down. else zoom width.
 		if (io.MouseWheel < 0) {
 			zoom = (io.KeyCtrl || g.IO.MouseDown[1]) ? ImVec2(1.0f, 1.3f) : ImVec2(1.3f, 1.0f);
+			graph_visual.changed = true;
 		}
 		if (io.MouseWheel > 0) {
-			zoom = (io.KeyCtrl || g.IO.MouseDown[1]) ? ImVec2(1.0f, 1.0f/1.3f) : ImVec2(1.0f/1.3f, 1.0f);
+			zoom = (io.KeyCtrl || g.IO.MouseDown[1]) ? ImVec2(1.0f, 1.0f / 1.3f) : ImVec2(1.0f / 1.3f, 1.0f);
+			graph_visual.changed = true;
 		}
 		if (zoom.x || zoom.y) {
 			for (int i = 0; i < graph_visuals.size(); i++) {
@@ -149,6 +152,7 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 		ImVec2 dragdelta(ImGui::GetMouseDragDelta(0));
 		if (dragdelta.x > 0)
 			graph_visual.anchored = false;
+		graph_visual.changed = true;
 	}
 
 	double last_sample_in_visualspace = graph_visual.sample_to_visualspace(ImVec2d(graph_channel.data_channel.size(), 0.)).x;
@@ -377,7 +381,7 @@ void GraphWidget::_render_legend(const ImRect& canvas_bb)
 	draw_list->AddRectFilled(p_min, p_max, fill_col, rounding);
 	draw_list->AddRect(p_min, p_max, border_col, rounding);
 
-	// start legend text rendring a few pixels inside of the frame rectangle
+	// start legend text rendering a few pixels inside of the frame rectangle
 	x += framepad; y += framepad;
 
 	ImGui::SetCursorScreenPos(ImVec2(x,y));

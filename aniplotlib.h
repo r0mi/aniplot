@@ -160,6 +160,7 @@ struct GraphVisual {
 		//portal = PortalRect(0,1, 1,0);
 		// also set y zero to center of the window
 		portal      = PortalRect(0,1, 1,-1);
+		changed     = false;
 		initialized = false;
 	}
 
@@ -182,6 +183,7 @@ struct GraphVisual {
 	bool          visible;        // graph line rendered or not.
 	uint32_t      flags;          // GraphVisualFlags_
 	PortalRect    portal;         // Everything coming out of this portal between 0..1 is visible. Resides in value-space.
+	bool          changed;
 	bool          initialized;
 
 	// // zoom: visualcenterpos: coordinates on the graph window around which everything changes. usually the coordinates under the mouse. 0..1
@@ -221,6 +223,8 @@ struct GraphWidget {
 	// size in pixels, with scrollbars (if scrollbars are turned on)
 	void DoGraph(const char* label, ImVec2 size=ImVec2(0,0));
 
+	ImVector<GraphVisual*> graph_visuals;
+
 private:
 	void _render_minmax_background(const PortalRect& screen_value_portal, GraphVisual& graph_visual, const ImRect& canvas_bb);
 	// Return value is a number of gridlines to render. One line off the screen on both ends to be able to render half-visible legend.
@@ -238,8 +242,6 @@ private:
 	void _draw_graphlines(const PortalRect& screen_sample_portal, GraphVisual& graph_visual, const ImRect& canvas_bb);
 
 	////////
-
-	ImVector<GraphVisual*> graph_visuals;
 
 	bool draw_bottom_scrollbar;
 	bool draw_top_scrollbar;
