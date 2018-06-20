@@ -498,10 +498,10 @@ int main(int, char**)
 				// OverlayDrawList should work without this window, but for some reason the fps display
 				// positioning was wrong. So we still need to create the background window although
 				// it's unused.
-				ImGui::SetNextWindowSize(io.DisplaySize, ImGuiSetCond_Always);
+				ImGui::SetNextWindowSize(io.DisplaySize, ImGuiCond_Always);
 				//ImGui::Begin("Robot", NULL, ImVec2(0.f, 0.f), 0.f, 0);
 				// fourth param is the window background alpha. if 0, no background is drawn.
-				ImGui::Begin("Robot", NULL, ImVec2(0.f, 0.f), 0.f,
+				ImGui::Begin("Robot", NULL,
 				             ImGuiWindowFlags_NoTitleBar |
 				             ImGuiWindowFlags_NoMove |
 				             ImGuiWindowFlags_NoResize |
@@ -536,7 +536,7 @@ int main(int, char**)
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
-			ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, 0);
+			ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0);
 			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
 			ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 0);
 
@@ -544,9 +544,9 @@ int main(int, char**)
 			float window_h = ImGui::GetIO().DisplaySize.y;
 			ImGui::SetNextWindowContentSize(ImVec2(window_w, window_h));
 			ImGui::SetNextWindowSize(ImVec2(window_w, window_h));
-			ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiSetCond_Always);
+			ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
 
-			ImGui::Begin("Robota", NULL, ImVec2(0.f, 0.f), 0.f,
+			ImGui::Begin("Robota", NULL,
 			             ImGuiWindowFlags_NoTitleBar |
 			             ImGuiWindowFlags_NoMove |
 			             ImGuiWindowFlags_NoResize |
@@ -634,6 +634,10 @@ int main(int, char**)
 			glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 			glClear(GL_COLOR_BUFFER_BIT);
 			ImGui::Render();
+		} else {
+			// NewFrame() now asserts if neither Render or EndFrame have been called. Exposed EndFrame(). Made it legal to call EndFrame() more than one. (#1423)
+			// ImGui_ImplSdlGL3_NewFrame calls NewFrame inside, so we need to end frame even when window_hidden
+			ImGui::EndFrame();
 		}
 
 		//

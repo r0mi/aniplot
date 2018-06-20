@@ -219,6 +219,10 @@ int main(int, char**)
 			glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 			glClear(GL_COLOR_BUFFER_BIT);
 			ImGui::Render();
+		} else {
+			// NewFrame() now asserts if neither Render or EndFrame have been called. Exposed EndFrame(). Made it legal to call EndFrame() more than one. (#1423)
+			// ImGui_ImplSdlGL3_NewFrame calls NewFrame inside, so we need to end frame even when window_hidden
+			ImGui::EndFrame();
 		}
 
 		//
