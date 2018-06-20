@@ -28,6 +28,9 @@ set GL3WDIR=.\lib\gl3w
 set IMGUIDIR=.\lib\imgui
 set BUILDDIR=.\build
 
+:: vcvarsall.bat will sometimes change the current working directory. prevent it.
+set VSCMD_START_DIR=%cd%
+:: set VSCMD_DEBUG=3
 call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x64
 
 rmdir /S /Q build

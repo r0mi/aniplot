@@ -37,8 +37,8 @@ rmdir /S /Q build
 mkdir build
 
 
-cl /FC /MD /Ox /Gy /Fo%BUILDDIR%\ /Fd%BUILDDIR%\ /Fm%BUILDDIR%\ /Fe%BUILDDIR%\aniplot.exe ^
-    aniplot.cpp ^
+cl /FC /MD /Ox /Gy /Fo%BUILDDIR%\ /Fd%BUILDDIR%\ /Fm%BUILDDIR%\ /Fe%BUILDDIR%\aniplot_example.exe ^
+    aniplot_example.cpp ^
     aniplotlib.cpp ^
     %IMGUIDIR%\examples\sdl_opengl3_example\imgui_impl_sdl_gl3.cpp ^
     %IMGUIDIR%\imgui.cpp %IMGUIDIR%\imgui_draw.cpp ^
@@ -57,13 +57,13 @@ if %errorlevel% neq 0 goto error
 
 rmdir /S /Q dist
 mkdir dist
-copy %BUILDDIR%\aniplot.exe .\dist\
+copy %BUILDDIR%\aniplot_example.exe .\dist\
 copy %SDL2DIR%\lib\x64\SDL2.dll .\dist\
 
 if %errorlevel% neq 0 goto error
 
 if exist "upx.exe" (
-    upx --lzma .\dist\aniplot.exe
+    upx --lzma .\dist\aniplot_example.exe
     upx --lzma .\dist\SDL2.dll
 )
 

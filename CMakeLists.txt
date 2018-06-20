@@ -3,6 +3,7 @@ project(aniplot)
 
 set( D          ${PROJECT_SOURCE_DIR} )
 set( DISTDIR    ${D}/dist )
+set( BUILDDIR   ${D}/build )
 
 #http://www.cmake.org/cmake/help/v3.0/module/FindOpenGL.html
 find_package(OpenGL REQUIRED)
@@ -58,8 +59,18 @@ elseif (WIN32)
 	target_sources             (${PROJECT_NAME} PRIVATE ${SOURCE_FILES})
 	target_link_libraries      (${PROJECT_NAME} ${OPENGL_gl_LIBRARY} "SDL2" "SDL2main" "ws2_32")
 
-	set_target_properties      (${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${DISTDIR})
-	set_target_properties      (${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${DISTDIR})
+	set(EXECUTABLE_OUTPUT_PATH ${BUILDDIR})
+	add_custom_command(TARGET aniplot POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/lib/SDL2-devel-2.0.4-VC/lib/x64/SDL2.dll ${BUILDDIR}/)
+
+	#set_target_properties      (${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${DISTDIR})
+	#set_target_properties      (${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${DISTDIR})
+	# THESE JUST WON'T WORK DURING BUILD TIME!
+	#file(COPY ${PROJECT_SOURCE_DIR}/lib/SDL2-devel-2.0.4-VC/lib/x64/SDL2.dll DESTINATION ${BUILDDIR}/)
+	# copy to dist
+	#file(REMOVE {$DIST}/*)
+	#file(MAKE_DIRECTORY ${DISTDIR})
+	#file(COPY ${BUILDDIR}/aniplot.exe DESTINATION ${DISTDIR}/)
+	#file(COPY ${BUILDDIR}/SDL2.dll DESTINATION ${DISTDIR}/)
 
 elseif (UNIX)
 	message(WARNING "todo")

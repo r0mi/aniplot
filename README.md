@@ -24,11 +24,16 @@ Build aniplot.exe
 
 ### Windows
 
-Install Visual Studio 2013, 2014 or 2017 and run one of:
+Method 1: Install Visual Studio 2013, 2014 or 2017 and run one of:
 
     build64-vc12-2013.bat
     build64-vc14-2015.bat
     build64-vc15-2017.bat
+
+Method 2: Install Visual Studio 2017:
+
+    File -> Open -> Folder...  select the aniplot folder. and have .... fun with the CMake side of things.
+
 
 Build aniplot_example.exe
 -------------------------
@@ -42,6 +47,11 @@ Build aniplot_example.exe
 
     apt-get install libsdl2-dev
     ./build64-linux-and-macos.sh example
+
+### Windows
+
+    build64-vc15-2017-example.bat
+
 
 Credits/dependencies
 --------------------
