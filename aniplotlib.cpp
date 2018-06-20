@@ -39,7 +39,7 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 	if (!graph_visuals.size())
 		return;
 	if (!m_textrend->font)
-		m_textrend->init(ImGui::GetWindowFont());
+		m_textrend->init(ImGui::GetFont());
 
 	ImGuiWindow* window = ImGui::GetCurrentWindow();
 	if (window->SkipItems)
@@ -59,7 +59,7 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 	const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
 	const ImRect total_bb(frame_bb.Min, frame_bb.Max);
 	ImGui::ItemSize(total_bb, style.FramePadding.y);
-	if (!ImGui::ItemAdd(total_bb, &id))
+	if (!ImGui::ItemAdd(total_bb, id))
 		return;
 
 	// this renders also the background.
@@ -68,7 +68,8 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 
 	// this is almost verbatim from ImGui::RenderFrame, but because we render our own background and only want
 	// the border, we copied the border rendering parts here.
-	if (window->Flags & ImGuiWindowFlags_ShowBorders) {
+	const float border_size = g.Style.FrameBorderSize;
+	if (border_size > 0.0f) {
 		window->DrawList->AddRect(frame_bb.Min + ImVec2(1, 1), frame_bb.Max + ImVec2(1, 1), ImGui::GetColorU32(ImGuiCol_BorderShadow), style.FrameRounding);
 		window->DrawList->AddRect(frame_bb.Min, frame_bb.Max, ImGui::GetColorU32(ImGuiCol_Border), style.FrameRounding);
 	}
@@ -92,7 +93,7 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 
 	//LOG_IMVEC2(visualmousecoord);
 
-	const bool hovered = ImGui::IsHovered(bb, id);
+	const bool hovered = ImGui::ItemHoverable(bb, id);
 	if (hovered) {
 		ImGui::SetHoveredID(id);
 	}
