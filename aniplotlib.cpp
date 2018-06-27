@@ -13,6 +13,43 @@
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
 
+GraphVisual::GraphVisual(GraphChannel* _graph_channel, uint32_t flags) {
+	IM_ASSERT(_graph_channel);
+	graph_channel         = _graph_channel;
+	line_color            = ImColor(200, 200, 200);
+	line_color_minmax     = ImColor(200, 150, 150, 100); // TODO: only alpha is used
+	minmax_bgcolor        = ImColor(27, 27, 27);
+	bg_color              = ImColor(0, 0, 0);
+	hor_grid_color        = ImVec4(0.19f, 0.19f, 0.19f, 1.0f);
+	hor_grid_text_color   = ImVec4(1.0f, 1.0f, 1.0f, 0.8f);
+	hor_grid_text_bgcolor = ImVec4(0.2f, 0.2f, 0.2f, 0.8f);
+	ver_grid_color        = ImVec4(0.19f, 0.19f, 0.19f, 1.0f);
+	ver_grid_text_color   = ImVec4(1.0f, 1.0f, 1.0f, 0.8f);
+	ver_grid_text_bgcolor = ImVec4(0.2f, 0.2f, 0.2f, 0.8f);
+	grid_legend_color     = ImVec4(0.65f, 0.15f, 0.15f, 1.0f);
+	grid_min_div_horizontal_pix = 50.0;
+	grid_min_div_vertical_pix   = 100.0;
+	flags       = 0;
+	line_width  = 1;
+	anchored    = true;
+	visible     = true;
+	// mirror horizontally. pixel coordinates start from top, but we want values start from bottom.
+	//portal = PortalRect(0,1, 1,0);
+	// also set y zero to center of the window
+	portal      = PortalRect(0,1, 1,-1);
+	changed     = false;
+	initialized = false;
+}
+
+GraphChannel::GraphChannel() {
+	// TODO: figure out better hack for guaranteeing string constructor run
+	name.resize(50);
+	unit.resize(50);
+	description.resize(50);
+	/////////////////////////////////////////////////////////////////
+	portal.max = ImVec2d(1000., 1.);// { set_value_samplespace_mapping(ImRect(0,0, 1000,1)); }
+}
+
 GraphWidget::GraphWidget()
 {
 	draw_bottom_scrollbar = false;

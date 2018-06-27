@@ -100,6 +100,9 @@ struct PortalRect {
 //      MipBuf, name, unit, description
 //      value_sample_portal : how to project samples from sample-space to value-space. this object resides in valuespace.
 struct GraphChannel {
+	//GraphChannel(float _sample_freq=1000) { set_value_samplespace_mapping(ImRect(0,0, _sample_freq,1)); }
+	GraphChannel();
+
 	MipBuf_t<float> data_channel;
 	std::string name; // for the legend
 	std::string unit; // displayed on the legend after value
@@ -111,9 +114,6 @@ struct GraphChannel {
 	float value_min;
 	float value_max;
 	PortalRect portal; // How to project samples from sample-space to value-space. Resides in sample-space.
-
-	//GraphChannel(float _sample_freq=1000) { set_value_samplespace_mapping(ImRect(0,0, _sample_freq,1)); }
-	GraphChannel() { portal.max = ImVec2d(1000., 1.);} // { set_value_samplespace_mapping(ImRect(0,0, 1000,1)); }
 
 	// convenience functions
 	inline void append_sample(float v) { data_channel.append(v); }
@@ -136,33 +136,7 @@ struct GraphChannel {
 // Contains info about how to draw the data (color, linewidth, background color between min-max values..)
 // There can be many GraphVisual objects per GraphChannel, so one GraphChannel can be drawn to many places in many different ways.
 struct GraphVisual {
-	GraphVisual(GraphChannel* _graph_channel, uint32_t flags=0) {
-		IM_ASSERT(_graph_channel);
-		graph_channel         = _graph_channel;
-		line_color            = ImColor(200, 200, 200);
-		line_color_minmax     = ImColor(200, 150, 150, 100); // TODO: only alpha is used
-		minmax_bgcolor        = ImColor(27, 27, 27);
-		bg_color              = ImColor(0, 0, 0);
-		hor_grid_color        = ImVec4(0.19f, 0.19f, 0.19f, 1.0f);
-		hor_grid_text_color   = ImVec4(1.0f, 1.0f, 1.0f, 0.8f);
-		hor_grid_text_bgcolor = ImVec4(0.2f, 0.2f, 0.2f, 0.8f);
-		ver_grid_color        = ImVec4(0.19f, 0.19f, 0.19f, 1.0f);
-		ver_grid_text_color   = ImVec4(1.0f, 1.0f, 1.0f, 0.8f);
-		ver_grid_text_bgcolor = ImVec4(0.2f, 0.2f, 0.2f, 0.8f);
-		grid_legend_color     = ImVec4(0.65f, 0.15f, 0.15f, 1.0f);
-		grid_min_div_horizontal_pix = 50.0;
-		grid_min_div_vertical_pix   = 100.0;
-		flags       = 0;
-		line_width  = 1;
-		anchored    = true;
-		visible     = true;
-		// mirror horizontally. pixel coordinates start from top, but we want values start from bottom.
-		//portal = PortalRect(0,1, 1,0);
-		// also set y zero to center of the window
-		portal      = PortalRect(0,1, 1,-1);
-		changed     = false;
-		initialized = false;
-	}
+	GraphVisual(GraphChannel* _graph_channel, uint32_t flags=0);
 
 	GraphChannel* graph_channel;  // GraphVisual does NOT take ownership of the graph_channel.
 	ImVec4        line_color;
