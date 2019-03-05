@@ -1,5 +1,5 @@
-// Copyright (c) 2015, Elmo Trolla
-// LICENSE: https://opensource.org/licenses/ISC
+// Elmo Trolla, 2019
+// Licence: pick one - public domain / UNLICENCE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
 
 #ifndef __MIP_BUF_T_H__
 #define __MIP_BUF_T_H__

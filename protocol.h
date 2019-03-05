@@ -1,5 +1,5 @@
-// Copyright (c) 2017, Elmo Trolla
-// LICENSE: https://opensource.org/licenses/ISC
+// Elmo Trolla, 2019
+// Licence: pick one - public domain / UNLICENCE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
 
 #ifndef PROTOCOL_H
 #define PROTOCOL_H

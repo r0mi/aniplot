@@ -1,3 +1,6 @@
+# Elmo Trolla, 2019
+# Licence: pick one - public domain / UNLICENCE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
+
 cmake_minimum_required(VERSION 3.3)
 project(aniplot)
 
