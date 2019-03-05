@@ -11,8 +11,6 @@
 :: /Zi : Select the type of debugging information created for your program and whether this information is kept in object (.obj) files or in a program database (PDB).
 ::       Produces a program database (PDB) that contains type information and symbolic debugging information for use with the debugger.
 :: /MD : Causes the application to use the multithread-specific and DLL-specific version of the run-time library. Defines _MT and _DLL and causes the compiler to place the library name MSVCRT.lib into the .obj file.
-:: /Gy : Enables function-level linking. Prevents unused functions from being included.
-:: /Ox : Uses maximum optimization (/Ob2gity /Gs).Uses maximum optimization (/Ob2gity /Gs).
 :: /OPT:REF : eliminates functions and data that are never referenced (depends on /Gy, but seems to do nothing for this program)
 ::
 
@@ -37,7 +35,7 @@ rmdir /S /Q build
 mkdir build
 
 
-cl /FC /MD /Ox /Gy /Fo%BUILDDIR%\ /Fd%BUILDDIR%\ /Fm%BUILDDIR%\ /Fe%BUILDDIR%\aniplot.exe ^
+cl /FC /MD /O2 /Fo%BUILDDIR%\ /Fd%BUILDDIR%\ /Fm%BUILDDIR%\ /Fe%BUILDDIR%\aniplot.exe ^
     aniplot.cpp ^
     aniplotlib.cpp ^
     %IMGUIDIR%\examples\sdl_opengl3_example\imgui_impl_sdl_gl3.cpp ^
