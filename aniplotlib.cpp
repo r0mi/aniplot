@@ -87,29 +87,27 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 	const ImGuiID id = window->GetID(label);
 
 	if (size.x <= 0.0f)
-		size.x =  ImGui::GetContentRegionAvail().x; // ImGui::CalcItemWidth() + 200;
+		size.x = ImGui::GetContentRegionAvail().x; // ImGui::CalcItemWidth() + 200;
 	if (size.y <= 0.0f)
 		size.y = ImGui::GetContentRegionAvail().y;
-	//size.y = 20 + (style.FramePadding.y * 2);
 
-	const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(size.x, size.y));
+	size.x = round(size.x);
+	size.y = round(size.y);
+
+	const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + size);
 	const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
 	const ImRect total_bb(frame_bb.Min, frame_bb.Max);
-	ImGui::ItemSize(total_bb, style.FramePadding.y);
+	ImGui::ItemSize(total_bb);
 	if (!ImGui::ItemAdd(total_bb, id))
 		return;
 
-	// this renders also the background.
-	// TODO: style.FrameRounding maha ja showborders ka maha.
-	//RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
-
 	// this is almost verbatim from ImGui::RenderFrame, but because we render our own background and only want
 	// the border, we copied the border rendering parts here.
-	const float border_size = g.Style.FrameBorderSize;
-	if (border_size > 0.0f) {
-		window->DrawList->AddRect(frame_bb.Min + ImVec2(1, 1), frame_bb.Max + ImVec2(1, 1), ImGui::GetColorU32(ImGuiCol_BorderShadow), style.FrameRounding);
-		window->DrawList->AddRect(frame_bb.Min, frame_bb.Max, ImGui::GetColorU32(ImGuiCol_Border), style.FrameRounding);
-	}
+	//float border_size = g.Style.FrameBorderSize;
+	//if (border_size > 0.0f) {
+	//	window->DrawList->AddRect(frame_bb.Min+ImVec2(1,1), frame_bb.Max+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), style.FrameRounding, ImDrawCornerFlags_All, border_size);
+	//	window->DrawList->AddRect(frame_bb.Min, frame_bb.Max, ImGui::GetColorU32(ImGuiCol_Border), style.FrameRounding, ImDrawCornerFlags_All, border_size);
+	//}
 
 	GraphVisual& graph_visual = *graph_visuals[0];
 	IM_ASSERT(graph_visual.graph_channel);
@@ -130,10 +128,7 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 
 	//LOG_IMVEC2(visualmousecoord);
 
-	const bool hovered = ImGui::ItemHoverable(bb, id);
-	if (hovered) {
-		ImGui::SetHoveredID(id);
-	}
+	bool hovered = ImGui::ItemHoverable(bb, id);
 
 	const bool tab_focus_requested = ImGui::FocusableItemRegister(window, g.ActiveId == id);
 	if ((tab_focus_requested || (hovered && (g.IO.MouseClicked[0] | g.IO.MouseDoubleClicked[0])))) {
