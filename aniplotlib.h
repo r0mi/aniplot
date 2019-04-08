@@ -1,8 +1,7 @@
 // Elmo Trolla, 2019
 // Licence: pick one - public domain / UNLICENCE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
 
-#ifndef ANIPLOTLIB_H
-#define ANIPLOTLIB_H
+#pragma once
 
 
 #include <string>
@@ -226,7 +225,3 @@ private:
 
 	ImguiTextwrap* m_textrend;
 };
-
-
-#endif // ANIPLOTLIB_H
-

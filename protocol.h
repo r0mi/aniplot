@@ -1,8 +1,7 @@
 // Elmo Trolla, 2019
 // Licence: pick one - public domain / UNLICENCE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
 
-#ifndef PROTOCOL_H
-#define PROTOCOL_H
+#pragma once
 
 //
 // aniplot network protocol
@@ -95,6 +94,3 @@ struct p_channel_samples {
 };
 
 #pragma pack(pop)
-
-#endif // PROTOCOL_H
-

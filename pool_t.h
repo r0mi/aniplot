@@ -1,8 +1,7 @@
 // Elmo Trolla, 2019
 // Licence: pick one - public domain / UNLICENCE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
 
-#ifndef __POOL_T_H__
-#define __POOL_T_H__
+#pragma once
 
 //
 // This pool is a two-level memory store - an array of pointers to segments.
@@ -252,6 +251,3 @@ void pool_t<T>::test()
 	assert(e->v1 == 5 && e->v2 == 6);
 	printf("555\n");
 }
-
-
-#endif // __POOL_T_H__
