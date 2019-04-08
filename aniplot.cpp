@@ -442,7 +442,6 @@ int main(int, char**)
 
 	// --------------------------------------------------------------------
 
-	//ImVec4 clear_color = ImColor(114, 144, 154);
 	ImVec4 clear_color = ImColor(128, 128, 128);
 
 	// This is necessary, or objects inside fullsize window are always a bit smaller than the window.
@@ -531,6 +530,10 @@ int main(int, char**)
 			// scan through all graph_world.streams and render what are active
 			//
 
+			// if background color is completely transparent, then drawing the background is skipped by imgui.
+			// TODO: replace with ImGuiWindowFlags_NoBackground when updating embedded imgui
+			ImGui::PushStyleColor(ImGuiCol_WindowBg, IM_COL32(0, 0, 0, 0));
+
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
@@ -551,7 +554,6 @@ int main(int, char**)
 			             ImGuiWindowFlags_NoMove |
 			             ImGuiWindowFlags_NoResize |
 			             ImGuiWindowFlags_NoCollapse |
-			             ImGuiWindowFlags_NoScrollbar |
 			             ImGuiWindowFlags_NoSavedSettings |
 			             ImGuiWindowFlags_NoScrollbar);
 
@@ -598,6 +600,7 @@ int main(int, char**)
 
 			ImGui::End();
 			ImGui::PopStyleVar(7);
+			ImGui::PopStyleColor(1);
 		}
 
 		// testing ground

@@ -19,8 +19,8 @@
 
 SDL_Window* window = NULL;
 
-#define INITIAL_SCREEN_WIDTH 1200
-#define INITIAL_SCREEN_HEIGHT 700
+#define INITIAL_SCREEN_WIDTH 800
+#define INITIAL_SCREEN_HEIGHT 600
 
 typedef std::shared_ptr<GraphWidget>  GraphWidgetPtr;
 typedef std::shared_ptr<GraphChannel> GraphChannelPtr;
@@ -79,6 +79,7 @@ void init_graphs()
 	graph_visual2_1.line_color = ImColor(0.5f, 1.0f, 0.5f);
 	graph_channel2_1.name = "speed";
 	graph_channel2_1.unit = "m/s";
+	graph_channel2_1.set_value_samplespace_mapping(ImRect(0, 0, 60, 1));
 }
 
 void append_samples()
@@ -195,6 +196,8 @@ int main(int, char**)
 		if (!window_hidden) {
 			append_samples();
 
+			ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+			ImGui::SetNextWindowSize(ImVec2(INITIAL_SCREEN_WIDTH - 40, INITIAL_SCREEN_HEIGHT - 40), ImGuiCond_FirstUseEver);
 			ImGui::Begin("usualwindow", NULL, ImGuiWindowFlags_NoScrollWithMouse);
 
 			float graph_w = 0; // 0 to fill available space
