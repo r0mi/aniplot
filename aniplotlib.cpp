@@ -396,9 +396,18 @@ void GraphWidget::_render_legend(const ImRect& canvas_bb)
 	// save cursor pos so we can restore it later
 	ImVec2 old_cursor_pos = ImGui::GetCursorPos();
 
+	// find max text size
+	float max_text_w = 0;
+	for (int i = 0; i < graph_visuals.size(); i++) {
+		if (graph_visuals[i]->graph_channel) {
+			ImVec2 sz = ImGui::CalcTextSize(graph_visuals[i]->graph_channel->name.c_str());
+			if (sz.x > max_text_w) max_text_w = sz.x;
+		}
+	}
+
 	// size and pos of the frame around legend box
 	float h = ((checkbox_height + GImGui->Style.ItemSpacing.y) * graph_visuals.size() - GImGui->Style.ItemSpacing.y + framepad * 2);
-	float w = (ImGui::GetTextLineHeight() * 10); // roughly how many characters wide. works only with square fonts
+	float w = max_text_w + 26; // TODO: right now, the 26 accounts for the checkmark size. have to get a better solution here.
 	float x = canvas_bb.Min.x + 43;
 	float y = canvas_bb.Max.y - h - 20;
 
