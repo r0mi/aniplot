@@ -1,15 +1,14 @@
 // Elmo Trolla, 2019
 // Licence: pick one - public domain / UNLICENCE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
 
+#pragma once
+
 //
 // memory-mapped file interface for windows.
 //
 //     MemFile f("data.bin");
 //     printf("last byte: %i", (int)f.buf[f.file_size-1]);
 //
-
-#ifndef MEMFILE_H
-#define MEMFILE_H
 
 
 #include "windows.h"
@@ -53,6 +52,3 @@ private:
 	HANDLE fileHandle;
 	HANDLE mapFile;
 };
-
-
-#endif // MEMFILE_H

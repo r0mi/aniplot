@@ -1,8 +1,7 @@
 // Elmo Trolla, 2019
 // Licence: pick one - public domain / UNLICENCE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
 
-#ifndef IMGUI_TEXTWRAP_H
-#define IMGUI_TEXTWRAP_H
+#pragma once
 
 //
 // Makes some simple uses of imgui text rendering api a bit simpler.
@@ -203,6 +202,3 @@ void ImguiTextwrap::m_fix_pos(float x, float y, float w, int positioning, float*
 	*x_fix = x;
 	*y_fix = y;
 }
-
-#endif // IMGUI_TEXTWRAP_IMPLEMENTATION
-
