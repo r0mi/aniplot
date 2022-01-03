@@ -58,7 +58,7 @@ struct p_layout {
 
 struct p_channel_info {
 	uint8_t  packet_type;
-	uint8_t  packet_version; // 2
+	uint8_t  packet_version; // 3
 	uint8_t  stream_id;
 
 	uint8_t  channel_index; // channel index in stream. starts from 0.
@@ -73,6 +73,7 @@ struct p_channel_info {
 	// TODO: can be swapped? what happens then? if portal is y-mirrored?
 	float    value_min;
 	float    value_max;
+	float    visible_seconds;
 	// used to translate and scale the samples to value-space
 	// x1 and y1 is mapped to 0 in value space, x2 and y2 is mapped to 1 in value space.
 	// for example using (0, 5,  1000, 0) maps sample num 1000 to 1s and sampleval 1 to 5V.

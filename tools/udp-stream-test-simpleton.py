@@ -20,7 +20,7 @@ import struct
 // packet version 2
 struct p_channel_info {
 	uint8_t  packet_type;
-	uint8_t  packet_version; // 2
+	uint8_t  packet_version; // 3
 	uint8_t  stream_id;
 
 	uint8_t  channel_index; // channel index in stream. starts from 0.
@@ -33,6 +33,7 @@ struct p_channel_info {
 	// used to draw visual limits. if you know your signal is for example 0..5V, use 0 as min and 5 as max here.
 	float    value_min;
 	float    value_max;
+	float    visible_seconds;
 	// used to translate and scale the samples to value-space
 	// x1 and y1 is mapped to 0 in value space, x2 and y2 is mapped to 1 in value space.
 	// for example using (0, 5,  1000, 0) maps sample num 1000 to 1s and sampleval 1 to 5V.
@@ -63,14 +64,13 @@ P_CHANNEL_SAMPLES = 10
 P_CHANNEL_INFO    = 11
 
 
-def build_channel_info(stream_id, channel_index, channel_name, unit, line_color_rgba8, line_width, value_limits, portal):
+def build_channel_info(stream_id, channel_index, channel_name, unit, line_color_rgba8, line_width, value_limits, visible_seconds, portal):
 	if len(channel_name) >= 50: channel_name = channel_name[:50]
 	if len(unit) >= 50: unit = unit[:50]
-	#return struct.pack("<BBBB51s51sBBBBBBfffffff", P_CHANNEL_INFO, 2, stream_id, channel_index, bytes(channel_name, "utf-8"), bytes(unit, "utf-8"), ord('f'), 0,
-	return struct.pack("<BBBB51s51sBBBBBBfffffff", P_CHANNEL_INFO, 2, stream_id, channel_index, bytes(channel_name), bytes(unit), ord('f'), 0,
+	return struct.pack("<BBBB51s51sBBBBBBffffffff", P_CHANNEL_INFO, 3, stream_id, channel_index, bytes(channel_name, "utf-8"), bytes(unit, "utf-8"), ord('f'), 0,
 		line_color_rgba8[0], line_color_rgba8[1], line_color_rgba8[2], line_color_rgba8[3],
 		line_width,
-		value_limits[0], value_limits[1],
+		value_limits[0], value_limits[1], visible_seconds,
 		portal[0], portal[1], portal[2], portal[3])
 
 def build_channel_samples_packet(stream_id, channel_index, samples_list):
@@ -81,11 +81,12 @@ def build_channel_samples_packet(stream_id, channel_index, samples_list):
 def send_channel_infos():
 	portal = (0, 0, 1000, 1)
 	visual_value_limits = (-3, 3)
-	p = build_channel_info(0, 0, "x-gyro", "deg/s", (255, 100, 100, 255), 3, visual_value_limits, portal)
+	visible_seconds = 5
+	p = build_channel_info(0, 0, "x-gyro", "deg/s", (255, 100, 100, 255), 3, visual_value_limits, visible_seconds, portal)
 	sock.sendto(p, ADDR)
-	p = build_channel_info(0, 1, "y-gyro", "deg/s", (100, 255, 100, 255), 1, visual_value_limits, portal)
+	p = build_channel_info(0, 1, "y-gyro", "deg/s", (100, 255, 100, 255), 1, visual_value_limits, visible_seconds, portal)
 	sock.sendto(p, ADDR)
-	p = build_channel_info(0, 2, "z-gyro", "deg/s", (100, 100, 255, 255), 2, visual_value_limits, portal)
+	p = build_channel_info(0, 2, "z-gyro", "deg/s", (100, 100, 255, 255), 2, visual_value_limits, visible_seconds, portal)
 	sock.sendto(p, ADDR)
 
 t_last_sent_channel_infos = 0.

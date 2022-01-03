@@ -102,7 +102,7 @@ public:
 	void update_channel_info(uint8_t stream_id, uint8_t channel_index_in_stream,
 			uint8_t* channel_name, uint8_t* channel_unit, uint8_t datatype,
 			uint32_t rgba, float line_width,
-			float value_min, float value_max,
+			float value_min, float value_max, float visible_seconds,
 			float portal_x1, float portal_y1, float portal_x2, float portal_y2) {
 
 		_fill_stream_with_channels(stream_id, channel_index_in_stream + 1);
@@ -125,7 +125,7 @@ public:
 			visual->initialized = true;
 			float h = value_max - value_min;
 			// set height of the portal to contain the whole expected value range plus 10% from top/bottom.
-			visual->set_visual_valuespace_mapping(ImRect(0,value_max+h*0.1, 1,value_min-h*0.1));
+			visual->set_visual_valuespace_mapping(ImRect(0,value_max+h*0.1, visible_seconds,value_min-h*0.1));
 		}
 		//visual->set_visual_valuespace_mapping(ImRect(0., 1., 1., -1));
 		visual->line_color = ImColor(rgba);
@@ -303,8 +303,8 @@ public:
 			case P_CHANNEL_INFO: {
 
 				p_channel_info* p = (p_channel_info*)rxbuf;
-				if (p->packet_version != 2) {
-					SDL_Log("ERROR: got packet P_CHANNEL_INFO version %i but waited for version 2",
+				if (p->packet_version != 3) {
+					SDL_Log("ERROR: got packet P_CHANNEL_INFO version %i but waited for version 3",
 					        p->packet_version);
 					packet_decoding_error = true;
 					break;
@@ -313,7 +313,7 @@ public:
 				graph_world.update_channel_info(p->stream_id, p->channel_index,
 				                                p->channel_name, p->unit, p->datatype,
 				                                p->line_color_rgba, p->line_width,
-				                                p->value_min, p->value_max,
+				                                p->value_min, p->value_max, p->visible_seconds,
 				                                p->portal_x1, p->portal_y1, p->portal_x2, p->portal_y2);
 				break;
 			}

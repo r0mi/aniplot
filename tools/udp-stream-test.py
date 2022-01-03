@@ -37,7 +37,7 @@ struct p_layout {
 
 struct p_channel_info {
 	uint8_t  packet_type;
-	uint8_t  packet_version; // 2
+	uint8_t  packet_version; // 3
 	uint8_t  stream_id;
 
 	uint8_t  channel_index; // channel index in stream. starts from 0.
@@ -51,6 +51,7 @@ struct p_channel_info {
 	// these are only used if channel_index is 0.
 	float    value_min;
 	float    value_max;
+	float    visible_seconds;
 	// used to translate and scale the samples to value-space
 	// x1 and y1 is mapped to 0 in value space, x2 and y2 is mapped to 1 in value space.
 	// for example using (0, 5,  1000, 0) maps sample num 1000 to 1s and sampleval 1 to 5V.
@@ -83,16 +84,16 @@ P_LAYOUT          = 12
 def build_layout(stream_id, x1, y1, x2, y2):
 	return struct.pack("<BBBBffff", P_LAYOUT, 1, 1, stream_id, x1, y1, x2, y2)
 
-def build_channel_info(stream_id, channel_index, channel_name, unit, line_color_rgba8, line_width, value_limits, portal):
-	return struct.pack("<BBBB51s51sBBBBBBfffffff",
+def build_channel_info(stream_id, channel_index, channel_name, unit, line_color_rgba8, line_width, value_limits, visible_seconds, portal):
+	return struct.pack("<BBBB51s51sBBBBBBffffffff",
 		P_CHANNEL_INFO,
-		2, # packet_version
+		3, # packet_version
 		stream_id, channel_index,
-		bytes(channel_name[:50]), bytes(unit[:50]), # for python3: bytes(channel_name[:50], "utf-8"), bytes(unit[:50], "utf-8")
+		bytes(channel_name[:50], "utf-8"), bytes(unit[:50], "utf-8"),
 		ord('f'), 0,
 		line_color_rgba8[0], line_color_rgba8[1], line_color_rgba8[2], line_color_rgba8[3],
 		line_width,
-		value_limits[0], value_limits[1],
+		value_limits[0], value_limits[1], visible_seconds,
 		portal[0], portal[1], portal[2], portal[3])
 
 def build_channel_samples_packet(stream_id, channel_index, samples_list):
@@ -102,10 +103,11 @@ def build_channel_samples_packet(stream_id, channel_index, samples_list):
 def send_setup_info():
 	portal = (0, 0, 1000, 1)
 	visual_value_limits = (-3, 3)
-	sock.sendto( build_channel_info(0, 0, "x-gyro", "deg/s", (255, 100, 100, 255), 3, visual_value_limits, portal), ADDR )
-	sock.sendto( build_channel_info(0, 1, "y-gyro", "deg/s", (100, 255, 100, 255), 1, visual_value_limits, portal), ADDR )
-	sock.sendto( build_channel_info(1, 0, "x-acc",  "m2/s",  (100, 100, 255, 255), 2, visual_value_limits, portal), ADDR )
-	sock.sendto( build_channel_info(2, 0, "z-acc",  "m2/s",  (255, 100, 255, 255), 2, visual_value_limits, portal), ADDR )
+	stream_visible_seconds = [1, 2, 3]
+	sock.sendto( build_channel_info(0, 0, "x-gyro", "deg/s", (255, 100, 100, 255), 3, visual_value_limits, stream_visible_seconds[0], portal), ADDR )
+	sock.sendto( build_channel_info(0, 1, "y-gyro", "deg/s", (100, 255, 100, 255), 1, visual_value_limits, stream_visible_seconds[0], portal), ADDR )
+	sock.sendto( build_channel_info(1, 0, "x-acc",  "m2/s",  (100, 100, 255, 255), 2, visual_value_limits, stream_visible_seconds[1], portal), ADDR )
+	sock.sendto( build_channel_info(2, 0, "z-acc",  "m2/s",  (255, 100, 255, 255), 2, visual_value_limits, stream_visible_seconds[2], portal), ADDR )
 	#sock.sendto( build_channel_info(2, 0, "z-acc",  "m2/s",  (100, 100, 255, 255), 2, visual_value_limits, portal), ADDR )
 
 	sock.sendto( build_layout(0, 0, 0, 0.5, 0.3), ADDR )
