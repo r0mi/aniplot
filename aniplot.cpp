@@ -1,5 +1,5 @@
 // Elmo Trolla, 2019
-// Licence: pick one - public domain / UNLICENCE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
+// License: pick one - public domain / UNLICENSE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
 
 #include <cstdlib>
 #include <iostream>
