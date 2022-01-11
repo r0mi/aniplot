@@ -1,18 +1,22 @@
 // Elmo Trolla, 2019
 // License: pick one - public domain / UNLICENSE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
 
-//#include <cstdlib>
-//#include <iostream>
 #include <memory> // required for linux std::shared_ptr
 #include <math.h>
 
-#include <GL/gl3w.h>
-#include <SDL.h>
-
 #define IMGUI_DEFINE_MATH_OPERATORS
+
 #include "imgui.h"
-#include "imgui_impl_sdl_gl3.h"
+#include "imgui_impl_sdl.h"
+#include "imgui_impl_opengl3.h"
 #include "imgui_internal.h" // for custom graph renderer
+
+#include "SDL.h"
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+	#include "SDL_opengles2.h"
+#else
+	#include "SDL_opengl.h"
+#endif
 
 #include "aniplotlib.h"
 
@@ -27,16 +31,17 @@ typedef std::shared_ptr<GraphChannel> GraphChannelPtr;
 typedef std::shared_ptr<GraphVisual>  GraphVisualPtr;
 
 // graph widget 1
-GraphWidget graph_widget1;
+GraphWidget  graph_widget1;
 GraphChannel graph_channel1_1;
 GraphChannel graph_channel1_2;
-GraphVisual graph_visual1_1(&graph_channel1_1);
-GraphVisual graph_visual1_2(&graph_channel1_2);
+GraphVisual  graph_visual1_1(&graph_channel1_1);
+GraphVisual  graph_visual1_2(&graph_channel1_2);
 
 // graph widget 2
-GraphWidget graph_widget2;
+GraphWidget  graph_widget2;
 GraphChannel graph_channel2_1;
-GraphVisual graph_visual2_1(&graph_channel2_1);
+GraphVisual  graph_visual2_1(&graph_channel2_1);
+
 
 void init_graphs()
 {
@@ -120,13 +125,38 @@ int main(int, char**)
 		return -1;
 	}
 
+	// Decide GL+GLSL versions
+
+	// opengl version 4.1 is max for yosemite. 2015-07-14
+
+	#if defined(IMGUI_IMPL_OPENGL_ES2)
+		// GL ES 2.0 + GLSL 100
+		const char* glsl_version = "#version 100";
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	#elif defined(__APPLE__)
+		// GL 3.2 Core + GLSL 150
+		const char* glsl_version = "#version 150";
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	#else
+		// GL 3.0 + GLSL 130
+		const char* glsl_version = "#version 130";
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	#endif
+
+	// Create window with graphics context
+
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-	// opengl version 4.1 is max for yosemite. 2015-07-14
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 	window = SDL_CreateWindow(
 			"Telemetry",
@@ -146,12 +176,7 @@ int main(int, char**)
 		return -1;
 	}
 
-	// Initialize GL3W
-	int r = gl3wInit();
-	if (r != 0) {
-		SDL_Log("Error initializing GL3W! %i\n", r);
-		return -1;
-	}
+	SDL_GL_MakeCurrent(window, gl_context);
 
 	SDL_Log("Supported GLSL version is %s.\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
@@ -160,9 +185,20 @@ int main(int, char**)
 		SDL_Log("Warning: Unable to set VSync for late swap tearing! SDL Error: %s\n", SDL_GetError());
 	}
 
-	// Setup ImGui binding
-	ImGui_ImplSdlGL3_Init(window);
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+	//ImGui::StyleColorsClassic();
+
+	// Setup Platform/Renderer backends
+	ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
+	ImGui_ImplOpenGL3_Init(glsl_version);
 
 	// --------------------------------------------------------------------
 
@@ -175,8 +211,9 @@ int main(int, char**)
 	while (!done) {
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
-			ImGui_ImplSdlGL3_ProcessEvent(&event);
+			ImGui_ImplSDL2_ProcessEvent(&event);
 			if (event.type == SDL_QUIT) done = true;
+
 			if (event.type == SDL_WINDOWEVENT) {
 				if (event.window.event == SDL_WINDOWEVENT_HIDDEN) {
 					//SDL_Log("event SDL_WINDOWEVENT_HIDDEN");
@@ -186,12 +223,19 @@ int main(int, char**)
 					//SDL_Log("event SDL_WINDOWEVENT_SHOWN");
 					window_hidden = false;
 				}
+				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window)) {
+					done = true;
+				}
 			}
 			if (event.type == SDL_KEYDOWN) {
 				if (event.key.keysym.sym == SDLK_ESCAPE) done = true;
 			}
 		}
-		ImGui_ImplSdlGL3_NewFrame(window);
+
+		// Start the Dear ImGui frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL2_NewFrame();
+		ImGui::NewFrame();
 
 		if (!window_hidden) {
 			append_samples();
@@ -218,13 +262,14 @@ int main(int, char**)
 		if (!window_hidden) {
 			ImGuiIO &io = ImGui::GetIO();
 			ImVec4 clear_color(0.5, 0.5, 0.5, 1.0);
+			ImGui::Render();
 			glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
 			glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 			glClear(GL_COLOR_BUFFER_BIT);
-			ImGui::Render();
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		} else {
 			// NewFrame() now asserts if neither Render or EndFrame have been called. Exposed EndFrame(). Made it legal to call EndFrame() more than one. (#1423)
-			// ImGui_ImplSdlGL3_NewFrame calls NewFrame inside, so we need to end frame even when window_hidden
+			// ImGui_ImplSDL2_NewFrame calls NewFrame inside, so we need to end frame even when window_hidden
 			ImGui::EndFrame();
 		}
 
@@ -293,11 +338,14 @@ int main(int, char**)
 	}
 
 	// Cleanup
-	ImGui_ImplSdlGL3_Shutdown();
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
+	ImGui::DestroyContext();
+
 	SDL_GL_DeleteContext(gl_context);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 
 	return 0;
 }
-

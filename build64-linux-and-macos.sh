@@ -1,8 +1,13 @@
 #!/bin/bash
+
+# usage:
+#
+#     build64-linux-and-macos.sh
+#     build64-linux-and-macos.sh example
+
 set -e
 set -x
 
-GL3WDIR=./lib/gl3w
 IMGUIDIR=./lib/imgui
 BUILDDIR=./build
 
@@ -33,12 +38,12 @@ rm -Rf $BUILDDIR
 mkdir $BUILDDIR
 
 g++ -O2 -std=gnu++11 \
-	-I$GL3WDIR -I$IMGUIDIR \
-	-I$IMGUIDIR/examples/sdl_opengl3_example \
+	-I$IMGUIDIR \
+	-I$IMGUIDIR/backends \
 	$OS_INCLUDES \
 	$MAIN_SRC \
 	aniplotlib.cpp \
-	$IMGUIDIR/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.cpp $IMGUIDIR/imgui.cpp $IMGUIDIR/imgui_demo.cpp $IMGUIDIR/imgui_draw.cpp $GL3WDIR/GL/gl3w.c \
+	imgui_unitybuild.cpp \
 	$OS_LINKS \
 	-o $BUILDDIR/$BIN
 

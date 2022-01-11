@@ -98,7 +98,7 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 	const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
 	const ImRect total_bb(frame_bb.Min, frame_bb.Max);
 	ImGui::ItemSize(total_bb);
-	if (!ImGui::ItemAdd(total_bb, id))
+	if (!ImGui::ItemAdd(total_bb, id, NULL, ImGuiItemFlags_Inputable))
 		return;
 
 	// this is almost verbatim from ImGui::RenderFrame, but because we render our own background and only want
@@ -130,7 +130,8 @@ void GraphWidget::DoGraph(const char* label, ImVec2 size)
 
 	bool hovered = ImGui::ItemHoverable(bb, id);
 
-	const bool tab_focus_requested = ImGui::FocusableItemRegister(window, g.ActiveId == id);
+	const bool tab_focus_requested = (ImGui::GetItemStatusFlags() & ImGuiItemStatusFlags_FocusedByTabbing) || g.NavActivateInputId == id;
+
 	if ((tab_focus_requested || (hovered && (g.IO.MouseClicked[0] | g.IO.MouseDoubleClicked[0])))) {
 		ImGui::SetActiveID(id, window);
 		ImGui::FocusWindow(window);
