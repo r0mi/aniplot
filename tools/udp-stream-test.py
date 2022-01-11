@@ -88,7 +88,7 @@ def build_channel_info(stream_id, channel_index, channel_name, unit, line_color_
 		P_CHANNEL_INFO,
 		2, # packet_version
 		stream_id, channel_index,
-		bytes(channel_name[:50]), bytes(unit[:50]), # for python3: bytes(channel_name[:50], "utf-8"), bytes(unit[:50], "utf-8")
+		bytes(channel_name[:50], "utf-8"), bytes(unit[:50], "utf-8"),
 		ord('f'), 0,
 		line_color_rgba8[0], line_color_rgba8[1], line_color_rgba8[2], line_color_rgba8[3],
 		line_width,
