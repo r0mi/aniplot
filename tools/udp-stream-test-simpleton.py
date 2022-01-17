@@ -17,7 +17,7 @@ import struct
 #define P_CHANNEL_INFO 11
 
 #pragma pack(push,1)
-// packet version 2
+
 struct p_channel_info {
 	uint8_t  packet_type;
 	uint8_t  packet_version; // 3
@@ -25,12 +25,13 @@ struct p_channel_info {
 
 	uint8_t  channel_index; // channel index in stream. starts from 0.
 	uint8_t  channel_name[51]; // zero-terminated
-	uint8_t  unit[51];  // zero-terminated
+	uint8_t  unit[51]; // zero-terminated. only used if channel_index is 0.
 	uint8_t  datatype; // "b", "f", "B", "d", "i", "u", "I", "U", "h", "H"; // only f is supported
 	uint8_t  reserved;
 	uint32_t line_color_rgba;
 	float    line_width; // rendering system will render thinner than 1 as 1 at the moment.
 	// used to draw visual limits. if you know your signal is for example 0..5V, use 0 as min and 5 as max here.
+	// these are only used if channel_index is 0.
 	float    value_min;
 	float    value_max;
 	float    visible_seconds;
@@ -42,9 +43,7 @@ struct p_channel_info {
 	float    portal_x2;
 	float    portal_y2;
 };
-#pragma pack(pop)
 
-#pragma pack(push,1)
 struct p_channel_samples {
 	uint8_t  packet_type;
 	uint8_t  packet_version;
@@ -82,12 +81,9 @@ def send_channel_infos():
 	portal = (0, 0, 1000, 1)
 	visual_value_limits = (-3, 3)
 	visible_seconds = 5
-	p = build_channel_info(0, 0, "x-gyro", "deg/s", (255, 100, 100, 255), 3, visual_value_limits, visible_seconds, portal)
-	sock.sendto(p, ADDR)
-	p = build_channel_info(0, 1, "y-gyro", "deg/s", (100, 255, 100, 255), 1, visual_value_limits, visible_seconds, portal)
-	sock.sendto(p, ADDR)
-	p = build_channel_info(0, 2, "z-gyro", "deg/s", (100, 100, 255, 255), 2, visual_value_limits, visible_seconds, portal)
-	sock.sendto(p, ADDR)
+	p = build_channel_info(0, 0, "x-gyro", "deg/s", (255, 100, 100, 255), 3, visual_value_limits, visible_seconds, portal); sock.sendto(p, ADDR)
+	p = build_channel_info(0, 1, "y-gyro", "deg/s", (100, 255, 100, 255), 1, visual_value_limits, visible_seconds, portal); sock.sendto(p, ADDR)
+	p = build_channel_info(0, 2, "z-gyro", "deg/s", (100, 100, 255, 255), 2, visual_value_limits, visible_seconds, portal); sock.sendto(p, ADDR)
 
 t_last_sent_channel_infos = 0.
 
@@ -104,10 +100,6 @@ while 1:
 	y2 = math.sin(t*12.) * math.sin(t*1.1) + 2.*math.sin(t*11.4)
 	y3 = math.sin(t*3.1) * math.sin(t*7.3) + math.sin(t*9.4)
 
-	#p = build_channel_samples_packet(0, 0, [y1, y1*0.9, y1*0.8, y1*0.7])
-	p = build_channel_samples_packet(0, 0, [y1])
-	sock.sendto(p, ADDR)
-	p = build_channel_samples_packet(0, 1, [y2])
-	sock.sendto(p, ADDR)
-	p = build_channel_samples_packet(0, 2, [y3])
-	sock.sendto(p, ADDR)
+	p = build_channel_samples_packet(0, 0, [y1]); sock.sendto(p, ADDR)
+	p = build_channel_samples_packet(0, 1, [y2]); sock.sendto(p, ADDR)
+	p = build_channel_samples_packet(0, 2, [y3]); sock.sendto(p, ADDR)

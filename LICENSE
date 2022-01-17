@@ -2,7 +2,6 @@
 External libraries:
 
     imgui: MIT (https://opensource.org/licenses/MIT)
-    gl3w : public domain, UNLICENCE (http://unlicense.org)
     SDL2 : zlib (https://www.zlib.net/zlib_license.html)
 
 

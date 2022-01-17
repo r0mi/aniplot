@@ -1,5 +1,5 @@
 // Elmo Trolla, 2019
-// Licence: pick one - public domain / UNLICENCE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
+// License: pick one - public domain / UNLICENSE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
 
 #pragma once
 
@@ -74,9 +74,10 @@ struct p_channel_info {
 	float    value_min;
 	float    value_max;
 	float    visible_seconds;
-	// used to translate and scale the samples to value-space
+	// Portal shows how samples are mapped to value space.
+	// Sample coordinates (sample num, sample value) are in sample space, and seconds and volts are in value space.
 	// x1 and y1 is mapped to 0 in value space, x2 and y2 is mapped to 1 in value space.
-	// for example using (0, 5,  1000, 0) maps sample num 1000 to 1s and sampleval 1 to 5V.
+	// For example (1, 10,  2, 255) maps sample num 1 to 0s, sample num 2 to 1s, sample value 10 to 0V and sample value 255 to 1V.
 	float    portal_x1;
 	float    portal_y1;
 	float    portal_x2;
