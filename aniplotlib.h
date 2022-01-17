@@ -1,5 +1,5 @@
 // Elmo Trolla, 2019
-// Licence: pick one - public domain / UNLICENCE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
+// License: pick one - public domain / UNLICENSE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
 
 #pragma once
 
@@ -31,10 +31,10 @@ enum GraphVisualFlags_ {
 };
 
 // TODO: use static inline instead of simply inline? to get rid of some warnings?
-inline ImVec2 operator-(const ImVec2& v)                     { return ImVec2(-v.x, -v.y); } // fdkz:
-inline ImVec2 operator/(const float lhs, const ImVec2& rhs)  { return ImVec2(lhs/rhs.x, lhs/rhs.y); } // fdkz:
-inline ImVec2 operator*(const float lhs, const ImVec2& rhs)  { return ImVec2(lhs*rhs.x, lhs*rhs.y); } // fdkz:
-inline ImVec2& operator*=(ImVec2& lhs, const ImVec2& rhs)    { lhs.x *= rhs.x; lhs.y *= rhs.y; return lhs; } // fdkz:
+//inline ImVec2 operator-(const ImVec2& v)                     { return ImVec2(-v.x, -v.y); } // fdkz:
+//inline ImVec2 operator/(const float lhs, const ImVec2& rhs)  { return ImVec2(lhs/rhs.x, lhs/rhs.y); } // fdkz:
+//inline ImVec2 operator*(const float lhs, const ImVec2& rhs)  { return ImVec2(lhs*rhs.x, lhs*rhs.y); } // fdkz:
+//inline ImVec2& operator*=(ImVec2& lhs, const ImVec2& rhs)    { lhs.x *= rhs.x; lhs.y *= rhs.y; return lhs; } // fdkz:
 
 // like imgui ImVec2, but uses double instead of float.
 struct ImVec2d {

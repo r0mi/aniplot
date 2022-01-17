@@ -13,49 +13,33 @@ Drag to move, scroll to zoom horizontally, scroll while holding down ctrl or rig
 
 `aniplot_example.exe` is a simpler example on how to use/embed the graph widget in imgui programs.
 
-Build aniplot.exe
------------------
+Build aniplot.exe and aniplot_example.exe
+-----------------------------------------
 
 ### MacOS (tested on Sierra and Mojave (needs to be Mojave from 2019-04 or newer))
 
     brew install sdl2
     ./build64-linux-and-macos.sh
+    ./build64-linux-and-macos.sh example
 
 ### Linux (tested on Debian stretch)
 
     apt-get install libsdl2-dev
     ./build64-linux-and-macos.sh
-
-### Windows
-
-Method 1: Install Visual Studio 2013, 2014 or 2017 and run one of:
-
-    build64-vc12-2013.bat
-    build64-vc14-2015.bat
-    build64-vc15-2017.bat
-
-Method 2: Install Visual Studio 2017:
-
-    File -> Open -> Folder...  select the aniplot folder. and have .... fun with the CMake side of things.
-
-
-Build aniplot_example.exe
--------------------------
-
-### MacOS (tested on Sierra and Mojave)
-
-    brew install sdl2
-    ./build64-linux-and-macos.sh example
-
-### Linux (tested on Debian stretch)
-
-    apt-get install libsdl2-dev
     ./build64-linux-and-macos.sh example
 
 ### Windows
 
-    build64-vc15-2017-example.bat
+Method 1: Install Visual Studio (2013..2022), and run:
 
+    (edit the files to select the installed Visual Studio version)
+
+    build64-vc.bat
+    build64-vc-example.bat
+
+Method 2: Install Visual Studio 2017 or later and use CMake support:
+
+    File -> Open -> Folder...  select the aniplot folder.
 
 Credits/dependencies
 --------------------
@@ -63,5 +47,4 @@ Credits/dependencies
 All dependencies are also included in the lib folder.
 
   * [https://github.com/ocornut/imgui](https://github.com/ocornut/imgui) the fabulous "dear imgui"
-  * [https://github.com/skaslev/gl3w](https://github.com/skaslev/gl3w) gl3w: Simple OpenGL core profile loading
   * [https://www.libsdl.org/](https://www.libsdl.org/) Simple DirectMedia Layer (SDL2)

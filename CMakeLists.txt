@@ -1,5 +1,5 @@
 # Elmo Trolla, 2019
-# Licence: pick one - public domain / UNLICENCE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
+# License: pick one - public domain / UNLICENSE (https://www.unlicense.org) / MIT (https://opensource.org/licenses/MIT).
 
 cmake_minimum_required(VERSION 3.3)
 project(aniplot)
@@ -24,11 +24,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2")
 
 set(SOURCE_FILES
 	aniplotlib.cpp
-	lib/gl3w/GL/gl3w.c
-	lib/imgui/imgui.cpp
-	lib/imgui/imgui_demo.cpp
-	lib/imgui/imgui_draw.cpp
-	lib/imgui/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.cpp)
+	imgui_unitybuild.cpp)
 
 
 if (MACOS)
@@ -51,14 +47,14 @@ if (MACOS)
 	#message(WARNING bbbb SDL2_INCLUDE_DIRS: ${SDL2_INCLUDE_DIRS}) # /usr/local/include/SDL2
 
 	add_executable(${PROJECT_NAME} "aniplot.cpp")
-	target_include_directories(${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIR} "lib/imgui" "lib/imgui/examples/sdl_opengl3_example/" "lib/gl3w" ${SDL2_INCLUDE_DIRS} "/usr/local/include") # ${CMAKE_SOURCE_DIR}
+	target_include_directories(${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIR} "lib/imgui" "lib/imgui/backends" ${SDL2_INCLUDE_DIRS} "/usr/local/include") # ${CMAKE_SOURCE_DIR}
 	target_link_libraries(${PROJECT_NAME} ${OPENGL_gl_LIBRARY} ${COREFOUNDATION} ${SDL2})
 
 elseif (WIN32)
 
 	link_directories           ("lib/SDL2-devel-2.0.4-VC/lib/x64/") # damnit this has to be above add_library or SDL2.lib is not found
 	add_executable             (${PROJECT_NAME} "aniplot.cpp")
-	target_include_directories (${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIR} "lib/imgui" "lib/imgui/examples/sdl_opengl3_example/" "lib/gl3w" "lib/SDL2-devel-2.0.4-VC/include")
+	target_include_directories (${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIR} "lib/imgui" "lib/imgui/backends" "lib/SDL2-devel-2.0.4-VC/include")
 	target_sources             (${PROJECT_NAME} PRIVATE ${SOURCE_FILES})
 	target_link_libraries      (${PROJECT_NAME} ${OPENGL_gl_LIBRARY} "SDL2" "SDL2main" "ws2_32")
 
